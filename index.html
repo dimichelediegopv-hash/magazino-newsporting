@@ -1005,15 +1005,6 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
             </select>
           </div>
 
-          {/* Unità */}
-          <div>
-            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
-              Unità di misura <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
-            </label>
-            <input className="input" placeholder="Es. kg, L, pz, conf..."
-              value={unit} onChange={e => setUnit(e.target.value)} />
-          </div>
-
           {err && (
             <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>
           )}
@@ -1140,10 +1131,6 @@ function EmployeeView({ user, orders, products, onAddOrder, onAddProduct, produc
                     onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='var(--bg2)'; }}>
                     <div style={{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:5 }}>{p.category}</div>
                     <div style={{ fontSize: isMobile ? 13 : 14, fontWeight:600, color:'var(--text)', marginBottom:8, lineHeight:1.3, overflowWrap:'break-word', wordBreak:'break-word' }}>{p.name}</div>
-                    <div style={{ fontSize:11, color:'var(--text2)', display:'flex', alignItems:'center', gap:4 }}>
-                      <span style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent)', display:'inline-block', flexShrink:0 }} />
-                      {p.unit}
-                    </div>
                   </button>
                 ))}
               </div>
@@ -1159,7 +1146,6 @@ function EmployeeView({ user, orders, products, onAddOrder, onAddProduct, produc
                       <span style={{ fontWeight:600, fontSize:14 }}>{p.name}</span>
                       <span style={{ color:'var(--text3)', fontSize:12, marginLeft:8 }}>{p.category}</span>
                     </div>
-                    <span style={{ fontSize:12, color:'var(--text2)', background:'var(--surface2)', padding:'3px 9px', borderRadius:999, flexShrink:0 }}>{p.unit}</span>
                     <Icon name="plus" size={14} />
                   </button>
                 ))}
@@ -1204,7 +1190,7 @@ function EmployeeView({ user, orders, products, onAddOrder, onAddProduct, produc
                       </span>
                     </div>
                     <div style={{ display:'flex', gap:14, fontSize:13, color:'var(--text2)' }}>
-                      <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, color:'var(--text)' }}>{o.quantity} {o.unit}</span>
+                      <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, color:'var(--text)' }}>{o.quantity}</span>
                       <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="clock" size={12} />{formatDate(o.date)}</span>
                     </div>
                     {o.note && <div style={{ fontSize:12, color:'var(--text3)', borderTop:'1px solid var(--border)', paddingTop:8, marginTop:8 }}>"{o.note}"</div>}
@@ -1272,7 +1258,7 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontWeight:700, fontSize:16, marginBottom:4, color:'var(--text)' }}>{o.productName}</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 12px', fontSize:13, color:'var(--text2)' }}>
-              <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:15, color:'var(--text)' }}>{o.quantity} <span style={{ fontSize:11, fontFamily:'var(--font-ui)', fontWeight:400, color:'var(--text2)' }}>{o.unit}</span></span>
+              <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:15, color:'var(--text)' }}>{o.quantity}</span>
               <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="user" size={11} />{o.userName}</span>
               <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="clock" size={11} />{formatDate(o.date)}</span>
             </div>
@@ -1318,7 +1304,7 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
         {o.note && <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>"{o.note}"</div>}
       </div>
       <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14 }}>
-        {o.quantity} <span style={{ fontFamily:'var(--font-ui)', fontSize:11, color:'var(--text2)', fontWeight:400 }}>{o.unit}</span>
+        {o.quantity}
       </div>
       <div style={{ fontSize:13, color:'var(--text2)' }}>{o.userName}</div>
       <div style={{ fontSize:12, color:'var(--text2)', display:'flex', alignItems:'center', gap:4 }}>
@@ -1401,13 +1387,6 @@ function EditProductModal({ product, onClose, onSubmit }) {
               {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div>
-            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
-              Unità di misura <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
-            </label>
-            <input className="input" placeholder="Es. kg, L, pz, conf..."
-              value={unit} onChange={e => setUnit(e.target.value)} />
-          </div>
           {err && <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>}
         </div>
 
@@ -1436,7 +1415,6 @@ function ProductRow({ product, onEdit, onDelete }) {
         <div style={{ fontWeight:600, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{product.name}</div>
         <div style={{ fontSize:12, color:'var(--text2)', marginTop:2, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
           <span>{product.category}</span>
-          {product.unit && <span style={{ background:'var(--surface2)', padding:'1px 7px', borderRadius:999, flexShrink:0 }}>{product.unit}</span>}
         </div>
       </div>
 
