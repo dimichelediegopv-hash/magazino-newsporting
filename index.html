@@ -947,6 +947,7 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
   const [name, setName]         = useState(prefillName);
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
   const [unit, setUnit]         = useState('');
+  const [supplier, setSupplier] = useState('');
   const [err, setErr]           = useState('');
 
   useEffect(() => {
@@ -956,7 +957,7 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
 
   const handleSubmit = () => {
     if (!name.trim()) { setErr('Il nome è obbligatorio.'); return; }
-    onSubmit({ name: name.trim(), category, unit: unit.trim() });
+    onSubmit({ name: name.trim(), category, unit: unit.trim(), supplier: supplier.trim() });
   };
 
   return (
@@ -1003,6 +1004,16 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
               onChange={e => setCategory(e.target.value)}>
               {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+          </div>
+
+          {/* Fornitore */}
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+              Fornitore <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
+            </label>
+            <input className="input" placeholder="Es. Metro, Makro, Lidl..."
+              value={supplier} onChange={e => setSupplier(e.target.value)}
+              autoCapitalize="words" />
           </div>
 
           {err && (
@@ -1256,7 +1267,10 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
         {/* Riga principale */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10 }}>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontWeight:700, fontSize:16, marginBottom:4, color:'var(--text)' }}>{o.productName}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, flexWrap:'wrap' }}>
+              <div style={{ fontWeight:700, fontSize:16, color:'var(--text)' }}>{o.productName}</div>
+              {o.supplier && <span style={{ fontSize:11, fontWeight:600, color:'#9a85e8', background:'rgba(130,110,200,0.12)', border:'1px solid rgba(130,110,200,0.3)', borderRadius:999, padding:'2px 8px' }}>{o.supplier}</span>}
+            </div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 12px', fontSize:13, color:'var(--text2)' }}>
               <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:15, color:'var(--text)' }}>{o.quantity}</span>
               <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="user" size={11} />{o.userName}</span>
@@ -1300,7 +1314,10 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
       onMouseEnter={e => e.currentTarget.style.background='var(--surface)'}
       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
       <div>
-        <div style={{ fontWeight:600, fontSize:14 }}>{o.productName}</div>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+          <span style={{ fontWeight:600, fontSize:14 }}>{o.productName}</span>
+          {o.supplier && <span style={{ fontSize:11, fontWeight:600, color:'#9a85e8', background:'rgba(130,110,200,0.12)', border:'1px solid rgba(130,110,200,0.3)', borderRadius:999, padding:'2px 8px' }}>{o.supplier}</span>}
+        </div>
         {o.note && <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>"{o.note}"</div>}
       </div>
       <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14 }}>
@@ -1341,6 +1358,7 @@ function EditProductModal({ product, onClose, onSubmit }) {
   const [name, setName]         = useState(product.name);
   const [category, setCategory] = useState(product.category);
   const [unit, setUnit]         = useState(product.unit);
+  const [supplier, setSupplier] = useState(product.supplier || '');
   const [err, setErr]           = useState('');
 
   useEffect(() => {
@@ -1350,7 +1368,7 @@ function EditProductModal({ product, onClose, onSubmit }) {
 
   const handleSubmit = () => {
     if (!name.trim()) { setErr('Il nome è obbligatorio.'); return; }
-    onSubmit({ id: product.id, name: name.trim(), category, unit: unit.trim() });
+    onSubmit({ id: product.id, name: name.trim(), category, unit: unit.trim(), supplier: supplier.trim() });
   };
 
   return (
@@ -1387,6 +1405,14 @@ function EditProductModal({ product, onClose, onSubmit }) {
               {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+              Fornitore <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
+            </label>
+            <input className="input" placeholder="Es. Metro, Makro, Lidl..."
+              value={supplier} onChange={e => setSupplier(e.target.value)}
+              autoCapitalize="words" />
+          </div>
           {err && <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>}
         </div>
 
@@ -1415,6 +1441,7 @@ function ProductRow({ product, onEdit, onDelete }) {
         <div style={{ fontWeight:600, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{product.name}</div>
         <div style={{ fontSize:12, color:'var(--text2)', marginTop:2, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
           <span>{product.category}</span>
+          {product.supplier && <span style={{ color:'#9a85e8', fontWeight:600 }}>· {product.supplier}</span>}
         </div>
       </div>
 
@@ -1444,6 +1471,7 @@ function ProductRow({ product, onEdit, onDelete }) {
 function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActiveTab, onAddProduct, products, onDeleteProduct, onEditProduct, productsDirty, onSaveProducts }) {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState('tutti');
+  const [supplierFilter, setSupplierFilter] = useState('tutti');
   const [sort, setSort] = useState('date-desc');
   const [search, setSearch] = useState('');
   const [showNewProduct, setShowNewProduct] = useState(false);
@@ -1461,12 +1489,15 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
   const pending = orders.filter(o => o.status === 'pending');
   const done    = orders.filter(o => o.status === 'done');
 
+  // Fornitori unici dagli ordini (escludi vuoti)
+  const suppliers = ['tutti', ...Array.from(new Set(baseOrders.map(o => o.supplier).filter(Boolean))).sort()];
+
   let displayed = baseOrders.filter(o => {
     if (!isArchive && filter === 'pending') return o.status === 'pending';
     if (!isArchive && filter === 'done') return o.status === 'done';
     if (search) return o.productName.toLowerCase().includes(search.toLowerCase()) || o.userName.toLowerCase().includes(search.toLowerCase());
     return true;
-  });
+  }).filter(o => supplierFilter === 'tutti' || o.supplier === supplierFilter);
   if (sort === 'date-desc') displayed = [...displayed].sort((a,b) => new Date(b.date)-new Date(a.date));
   if (sort === 'date-asc')  displayed = [...displayed].sort((a,b) => new Date(a.date)-new Date(b.date));
   if (sort === 'name')      displayed = [...displayed].sort((a,b) => a.productName.localeCompare(b.productName));
@@ -1647,6 +1678,20 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
             )}
           </div>
 
+          {/* Filtro fornitori — solo se ci sono fornitori assegnati */}
+          {suppliers.length > 1 && (
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>Fornitore</div>
+              <div className="chips-row" style={{ gap:6 }}>
+                {suppliers.map(s => (
+                  <button key={s} className={`chip ${supplierFilter===s?'active':''}`} onClick={() => setSupplierFilter(s)}>
+                    {s === 'tutti' ? 'Tutti i fornitori' : s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Tabella / cards ordini */}
           <div className="anim-fadeUp card" style={{ animationDelay:'120ms', padding:0, overflow:'hidden' }}>
             {displayed.length === 0 ? (
@@ -1811,6 +1856,7 @@ function App() {
       productId: product.id, productName: product.name, quantity: qty,
       unit: product.unit, userId: u.id, userName: u.name,
       date: new Date().toISOString(), status: 'pending', note: note || '',
+      supplier: product.supplier || '',
     };
     if (FB_ENABLED && _db) {
       _db.ref('orders').push(newOrder);
@@ -1843,10 +1889,10 @@ function App() {
   };
 
   const nextPidRef = useRef(Date.now());
-  const handleAddProduct = ({ name, category, unit }) => {
+  const handleAddProduct = ({ name, category, unit, supplier }) => {
     const existing = products.find(p => p.name.toLowerCase() === name.toLowerCase());
     if (existing) { showToast(`"${name}" è già nel catalogo`, 'error'); return existing; }
-    const prod = { id: 'local_' + (nextPidRef.current++), name, category, unit: unit || '' };
+    const prod = { id: 'local_' + (nextPidRef.current++), name, category, unit: unit || '', supplier: supplier || '' };
     setProducts(prev => [...prev, prod]);
     setProductsDirty(true);
     showToast(`"${name}" aggiunto — premi Salva per confermare`, 'success');
@@ -1860,8 +1906,8 @@ function App() {
     if (p) showToast(`"${p.name}" rimosso — premi Salva per confermare`, 'success');
   };
 
-  const handleEditProduct = ({ id, name, category, unit }) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, name, category, unit } : p));
+  const handleEditProduct = ({ id, name, category, unit, supplier }) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, name, category, unit, supplier: supplier || '' } : p));
     setProductsDirty(true);
     showToast(`"${name}" modificato — premi Salva per confermare`, 'success');
   };
@@ -1873,7 +1919,7 @@ function App() {
         const key = (typeof p.id === 'string' && p.id.startsWith('-'))
           ? p.id
           : _db.ref('products').push().key;
-        obj[key] = { name: p.name, category: p.category, unit: p.unit || '' };
+        obj[key] = { name: p.name, category: p.category, unit: p.unit || '', supplier: p.supplier || '' };
       });
       _db.ref('products').set(obj);
     }
