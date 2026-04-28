@@ -1031,7 +1031,7 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
 }
 
 /* ─── Vista dipendente ───────────────────────────────── */
-function EmployeeView({ user, orders, products, onAddOrder, onAddProduct }) {
+function EmployeeView({ user, orders, products, onAddOrder, onAddProduct, productsDirty, onSaveProducts }) {
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState('prodotti'); // 'prodotti' | 'richieste'
   const [search, setSearch] = useState('');
@@ -1067,6 +1067,17 @@ function EmployeeView({ user, orders, products, onAddOrder, onAddProduct }) {
 
   return (
     <div style={{ maxWidth:1200, margin:'0 auto', padding:'20px 16px', overflowX:'hidden' }} className={isMobile ? 'has-mobile-tabs' : ''}>
+
+      {/* Barra salva catalogo */}
+      {productsDirty && (
+        <div className="anim-fadeUp" style={{ marginBottom:14, padding:'12px 16px', background:'rgba(232,160,32,0.12)', border:'1px solid rgba(232,160,32,0.35)', borderRadius:'var(--radius)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <span style={{ fontSize:14, color:'var(--accent)', fontWeight:600 }}>Hai modifiche non salvate al catalogo</span>
+          <button className="btn btn-primary btn-sm" onClick={onSaveProducts} style={{ flexShrink:0 }}>
+            <Icon name="check" size={14} /> Salva
+          </button>
+        </div>
+      )}
+
       <div className="employee-grid" style={{ display:'grid', gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : '1fr 320px', gap:24, alignItems:'start' }}>
 
         {/* Colonna sinistra: prodotti */}
@@ -1452,7 +1463,7 @@ function ProductRow({ product, onEdit, onDelete }) {
 }
 
 /* ─── Vista Admin ────────────────────────────────────── */
-function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActiveTab, onAddProduct, products, onDeleteProduct, onEditProduct }) {
+function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActiveTab, onAddProduct, products, onDeleteProduct, onEditProduct, productsDirty, onSaveProducts }) {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState('tutti');
   const [sort, setSort] = useState('date-desc');
@@ -1526,10 +1537,23 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
         </div>
       )}
 
-      {/* Bottone nuovo prodotto */}
-      <button className="btn btn-primary" style={{ width:'100%', marginTop:isMobile ? 20 : 16 }} onClick={() => setShowNewProduct(true)}>
-        <Icon name="plus" size={16} /> Aggiungi prodotto al catalogo
-      </button>
+      {/* Bottone nuovo prodotto + Salva */}
+      <div style={{ display:'flex', gap:8, marginTop:isMobile ? 20 : 16 }}>
+        <button className="btn btn-primary" style={{ flex:1 }} onClick={() => setShowNewProduct(true)}>
+          <Icon name="plus" size={16} /> Aggiungi prodotto
+        </button>
+        {productsDirty && (
+          <button className="btn btn-primary anim-fadeIn" onClick={onSaveProducts}
+            style={{ flex:1, background:'var(--green)', borderColor:'var(--green)' }}>
+            <Icon name="check" size={16} /> Salva catalogo
+          </button>
+        )}
+      </div>
+      {productsDirty && (
+        <div style={{ marginTop:8, fontSize:12, color:'var(--accent)', textAlign:'center' }}>
+          Hai modifiche non salvate — premi "Salva catalogo" per confermare
+        </div>
+      )}
 
       {/* Catalogo prodotti — solo admin, con elimina */}
       {(() => {
@@ -1761,17 +1785,19 @@ function App() {
   const [products, setProducts] = useState(() => loadLS('ns_products', INITIAL_PRODUCTS));
   const [toasts, setToasts] = useState([]);
   const [activeTab, setActiveTab] = useState('ordini');
+  const [productsDirty, setProductsDirty] = useState(false);
 
   /* ── Salva su localStorage (fallback senza Firebase) ── */
   useEffect(() => { if (!FB_ENABLED) saveLS('ns_orders', orders); }, [orders]);
   useEffect(() => { if (!FB_ENABLED) saveLS('ns_products', products); }, [products]);
 
-  /* ── Firebase: ascolta ordini e prodotti in tempo reale ── */
+  /* ── Firebase: ordini in tempo reale, prodotti caricati una volta sola ── */
   useEffect(() => {
     if (!FB_ENABLED || !_db) return;
     const ordRef = _db.ref('orders');
     const proRef = _db.ref('products');
 
+    // Ordini: tempo reale (admin vede nuove richieste subito)
     ordRef.on('value', snap => {
       const data = snap.val() || {};
       const list = Object.entries(data)
@@ -1780,7 +1806,8 @@ function App() {
       setOrders(list);
     });
 
-    proRef.on('value', snap => {
+    // Prodotti: carica UNA VOLTA sola, nessun aggiornamento automatico
+    proRef.once('value', snap => {
       const data = snap.val();
       if (data) {
         setProducts(Object.entries(data).map(([k, v]) => ({ ...v, id: k })));
@@ -1789,7 +1816,7 @@ function App() {
       }
     });
 
-    return () => { ordRef.off(); proRef.off(); };
+    return () => { ordRef.off(); };
   }, []);
 
   const showToast = useCallback((msg, type='success') => {
@@ -1837,40 +1864,44 @@ function App() {
     if (o) showToast(`"${o.productName}" eliminato`, 'success');
   };
 
-  const nextPidRef = useRef(INITIAL_PRODUCTS.length + 1);
+  const nextPidRef = useRef(Date.now());
   const handleAddProduct = ({ name, category, unit }) => {
     const existing = products.find(p => p.name.toLowerCase() === name.toLowerCase());
     if (existing) { showToast(`"${name}" è già nel catalogo`, 'error'); return existing; }
-    const base = { name, category, unit: unit || '' };
-    if (FB_ENABLED && _db) {
-      const ref = _db.ref('products').push(base);
-      showToast(`"${name}" aggiunto al catalogo!`, 'success');
-      return { ...base, id: ref.key };
-    } else {
-      const prod = { ...base, id: nextPidRef.current++ };
-      setProducts(prev => [...prev, prod]);
-      showToast(`"${name}" aggiunto al catalogo!`, 'success');
-      return prod;
-    }
+    const prod = { id: 'local_' + (nextPidRef.current++), name, category, unit: unit || '' };
+    setProducts(prev => [...prev, prod]);
+    setProductsDirty(true);
+    showToast(`"${name}" aggiunto — premi Salva per confermare`, 'success');
+    return prod;
   };
 
   const handleDeleteProduct = id => {
     const p = products.find(x => x.id === id);
-    if (FB_ENABLED && _db) {
-      _db.ref(`products/${id}`).remove();
-    } else {
-      setProducts(prev => prev.filter(x => x.id !== id));
-    }
-    if (p) showToast(`"${p.name}" rimosso dal catalogo`, 'success');
+    setProducts(prev => prev.filter(x => x.id !== id));
+    setProductsDirty(true);
+    if (p) showToast(`"${p.name}" rimosso — premi Salva per confermare`, 'success');
   };
 
   const handleEditProduct = ({ id, name, category, unit }) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, name, category, unit } : p));
+    setProductsDirty(true);
+    showToast(`"${name}" modificato — premi Salva per confermare`, 'success');
+  };
+
+  const handleSaveProducts = () => {
     if (FB_ENABLED && _db) {
-      _db.ref(`products/${id}`).update({ name, category, unit });
-    } else {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, name, category, unit } : p));
+      const obj = {};
+      products.forEach(p => {
+        const key = (typeof p.id === 'string' && p.id.startsWith('-'))
+          ? p.id
+          : _db.ref('products').push().key;
+        obj[key] = { name: p.name, category: p.category, unit: p.unit || '' };
+      });
+      _db.ref('products').set(obj);
     }
-    showToast(`"${name}" aggiornato`, 'success');
+    saveLS('ns_products', products);
+    setProductsDirty(false);
+    showToast('Catalogo salvato!', 'success');
   };
 
   if (!user) return (
@@ -1884,8 +1915,8 @@ function App() {
     <TweaksWrapper>
       <Header user={user} onLogout={handleLogout} />
       {user.role === 'employee'
-        ? <EmployeeView user={user} orders={orders} products={products} onAddOrder={handleAddOrder} onAddProduct={handleAddProduct} />
-        : <AdminView orders={orders} onUpdateStatus={handleUpdateStatus} onDeleteOrder={handleDeleteOrder} activeTab={activeTab} setActiveTab={setActiveTab} onAddProduct={handleAddProduct} products={products} onDeleteProduct={handleDeleteProduct} onEditProduct={handleEditProduct} />
+        ? <EmployeeView user={user} orders={orders} products={products} onAddOrder={handleAddOrder} onAddProduct={handleAddProduct} productsDirty={productsDirty} onSaveProducts={handleSaveProducts} />
+        : <AdminView orders={orders} onUpdateStatus={handleUpdateStatus} onDeleteOrder={handleDeleteOrder} activeTab={activeTab} setActiveTab={setActiveTab} onAddProduct={handleAddProduct} products={products} onDeleteProduct={handleDeleteProduct} onEditProduct={handleEditProduct} productsDirty={productsDirty} onSaveProducts={handleSaveProducts} />
       }
       <ToastContainer toasts={toasts} />
     </TweaksWrapper>
