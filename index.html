@@ -745,6 +745,18 @@ const INITIAL_ORDERS = [
   { id:104, productId:17, productName:'Detergente piatti',  quantity:3,   unit:'L',  userId:6, userName:'Donatella', date:new Date(Date.now()-3600000*26).toISOString(), status:'pending', note:'Quasi finito' },
 ];
 const PRODUCT_CATEGORIES = ['Dispensa', 'Bevande', 'Monouso', 'Cucina', 'Pulizie', 'Alimenti'];
+const SUPPLIERS = [
+  'AD BEVERAGE SPA','AGNONI SRL','AMADIO CARNI S.R.L.','AMAZON',
+  'BARANELLO S.R.L.','BRANCHI SRL','C.I.M.A. SRL',
+  'CANTINE UMBERTO BORTOLOTTI SRL','CENTRO CARTA PALESTINI',
+  'DECANTO SRL','DIFFUSION BEER SRL','DI FIORE STEFANO SALUMIFICIO',
+  'DUE EMME SRL','GELDI SPA','HADERBURG SRL','IL TUCANO FOOD',
+  'LA NEF SPA','LES CAVES DE PYRENE SRL','LIBER SRL','MALETTI 1867 SRL',
+  'METRO ITALIA SPA','MONSUPELLO EREDI DI BOATTI CARLO','MORANDIN S.R.L.',
+  'PAPERTEK','SCELGO SPA','SOCIETA\' AGRICOLA COSTANTINI',
+  'SOCIETA\' AGRICOLA PASETTI','VALLE REALE S.R.L.',
+  'VIGGIANI PAOLO','VINARIUS DE PASQUALE SAS',
+];
 const CATEGORIES = ['Tutti', ...PRODUCT_CATEGORIES];
 
 /* ─── Utils ─────────────────────────────────────────── */
@@ -942,6 +954,66 @@ function OrderModal({ product, onClose, onSubmit }) {
   );
 }
 
+/* ─── SupplierSelect: dropdown con ricerca ──────────── */
+function SupplierSelect({ value, onChange }) {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const close = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('touchstart', close); };
+  }, []);
+
+  const filtered = SUPPLIERS.filter(s => !query || s.toLowerCase().includes(query.toLowerCase()));
+  const pick = s => { onChange(s); setQuery(s); setOpen(false); };
+
+  return (
+    <div ref={wrapRef} style={{ position:'relative' }}>
+      <div style={{ position:'relative' }}>
+        <input className="input" value={query} autoComplete="off" spellCheck={false}
+          placeholder="Cerca o seleziona fornitore…"
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          style={{ paddingRight:36 }}
+        />
+        <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none', fontSize:11 }}>▾</span>
+      </div>
+      {open && (
+        <div style={{
+          position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:700,
+          background:'var(--bg2)', border:'1px solid var(--border2)',
+          borderRadius:'var(--radius)', maxHeight:220, overflowY:'auto',
+          boxShadow:'0 8px 32px rgba(0,0,0,0.55)', WebkitOverflowScrolling:'touch'
+        }}>
+          {value && (
+            <button type="button" onMouseDown={e => { e.preventDefault(); pick(''); }}
+              style={{ display:'block', width:'100%', padding:'10px 14px', textAlign:'left', background:'transparent', border:'none', borderBottom:'1px solid var(--border)', color:'var(--text3)', cursor:'pointer', fontSize:13, fontFamily:'var(--font-ui)', fontStyle:'italic' }}>
+              — Nessun fornitore
+            </button>
+          )}
+          {filtered.length === 0
+            ? <div style={{ padding:'12px 14px', color:'var(--text3)', fontSize:13 }}>Nessun fornitore trovato</div>
+            : filtered.map(s => (
+              <button key={s} type="button" onMouseDown={e => { e.preventDefault(); pick(s); }}
+                style={{ display:'block', width:'100%', padding:'11px 14px', textAlign:'left', fontFamily:'var(--font-ui)',
+                  background: s === value ? 'var(--accent-dim)' : 'transparent',
+                  border:'none', borderBottom:'1px solid var(--border)',
+                  color: s === value ? 'var(--accent)' : 'var(--text)',
+                  cursor:'pointer', fontSize:14, transition:'background 0.1s',
+                  fontWeight: s === value ? 700 : 400 }}>
+                {s}
+              </button>
+            ))
+          }
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Modal nuovo prodotto ───────────────────────────── */
 function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
   const [name, setName]         = useState(prefillName);
@@ -1011,9 +1083,7 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
             <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
               Fornitore <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
             </label>
-            <input className="input" placeholder="Es. Metro, Makro, Lidl..."
-              value={supplier} onChange={e => setSupplier(e.target.value)}
-              autoCapitalize="words" />
+            <SupplierSelect value={supplier} onChange={setSupplier} />
           </div>
 
           {err && (
@@ -1409,9 +1479,7 @@ function EditProductModal({ product, onClose, onSubmit }) {
             <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
               Fornitore <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
             </label>
-            <input className="input" placeholder="Es. Metro, Makro, Lidl..."
-              value={supplier} onChange={e => setSupplier(e.target.value)}
-              autoCapitalize="words" />
+            <SupplierSelect value={supplier} onChange={setSupplier} />
           </div>
           {err && <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>}
         </div>
@@ -1678,17 +1746,25 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
             )}
           </div>
 
-          {/* Filtro fornitori — solo se ci sono fornitori assegnati */}
+          {/* Filtro fornitori */}
           {suppliers.length > 1 && (
-            <div style={{ marginBottom:12 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>Fornitore</div>
-              <div className="chips-row" style={{ gap:6 }}>
-                {suppliers.map(s => (
-                  <button key={s} className={`chip ${supplierFilter===s?'active':''}`} onClick={() => setSupplierFilter(s)}>
-                    {s === 'tutti' ? 'Tutti i fornitori' : s}
-                  </button>
-                ))}
+            <div style={{ marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em', whiteSpace:'nowrap' }}>Fornitore</div>
+              <div style={{ flex:1, position:'relative', maxWidth: isMobile ? '100%' : 340 }}>
+                <select className="select-native"
+                  value={supplierFilter}
+                  onChange={e => setSupplierFilter(e.target.value)}
+                  style={{ paddingLeft:36, minHeight:42 }}>
+                  <option value="tutti">Tutti i fornitori</option>
+                  {suppliers.filter(s => s !== 'tutti').map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', fontSize:14 }}>🏪</span>
               </div>
+              {supplierFilter !== 'tutti' && (
+                <button className="btn btn-ghost btn-sm" onClick={() => setSupplierFilter('tutti')} style={{ flexShrink:0, fontSize:13 }}>✕ Rimuovi filtro</button>
+              )}
             </div>
           )}
 
