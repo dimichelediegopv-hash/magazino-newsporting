@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<!-- viewport-fit=cover: rispetta notch e Dynamic Island iPhone -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<!-- PWA / home screen -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="New Sporting" />
+<meta name="theme-color" content="#0e0d0b" />
+<title>Kombucha New Sporting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<!-- Firebase SDK (sync cross-device in tempo reale) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Prevent iOS text size adjustment */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+  :root {
+    --bg: #0e0d0b;
+    --bg2: #17160f;
+    --bg3: #1f1e16;
+    --surface: #242318;
+    --surface2: #2c2b1e;
+    --border: #35331f;
+    --border2: #4a4830;
+    --accent: #e8a020;
+    --accent-dim: rgba(232,160,32,0.15);
+    --accent-hover: #f0b340;
+    --text: #f0ead8;
+    --text2: #a09880;
+    --text3: #6b6450;
+    --green: #4caf76;
+    --green-dim: rgba(76,175,118,0.12);
+    --red: #e05050;
+    --red-dim: rgba(224,80,80,0.12);
+    --font-ui: 'Space Grotesk', sans-serif;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --radius: 10px;
+    --radius-lg: 16px;
+    /* Safe areas iPhone */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    /* Smooth scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Rimuovi flash blu al tocco su iOS */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.6;
+  }
+
+  #root { min-height: 100dvh; }
+
+  /* ── Previeni overflow orizzontale globale ── */
+  #root, .employee-grid, .stat-grid { min-width: 0; }
+  img, svg, video { max-width: 100%; }
+
+  /* Scrollbar (desktop only) */
+  @media (hover: hover) {
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .anim-fadeUp  { animation: fadeUp  0.4s cubic-bezier(0.16,1,0.3,1) both; }
+  .anim-fadeIn  { animation: fadeIn  0.3s ease both; }
+  .anim-scaleIn { animation: scaleIn 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+  .anim-slideUp { animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: calc(16px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    width: calc(100% - 32px);
+    max-width: 360px;
+  }
+  .toast {
+    width: 100%;
+    padding: 13px 18px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid;
+    animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+    text-align: center;
+  }
+  .toast-success { background: rgba(76,175,118,0.18); border-color: var(--green); color: var(--green); }
+  .toast-error   { background: rgba(224,80,80,0.18); border-color: var(--red); color: var(--red); }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-pending  { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(232,160,32,0.3); }
+  .badge-done     { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,175,118,0.3); }
+  .badge-employee { background: rgba(130,110,200,0.12); color: #9a85e8; border: 1px solid rgba(130,110,200,0.3); }
+  .badge-admin    { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(232,160,32,0.3); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 18px;       /* leggermente più alto per touch */
+    min-height: 46px;          /* Apple HIG: min 44px */
+    border-radius: var(--radius);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .btn:active { transform: scale(0.96); opacity: 0.85; }
+  /* Hover solo su dispositivi che supportano hover (non touch) */
+  @media (hover: hover) {
+    .btn-primary:hover  { background: var(--accent-hover); }
+    .btn-ghost:hover    { background: var(--surface); color: var(--text); border-color: var(--border2); }
+    .btn-danger:hover   { background: rgba(224,80,80,0.2); }
+  }
+  .btn-primary { background: var(--accent); color: #0e0d0b; border-color: var(--accent); }
+  .btn-ghost   { background: transparent; color: var(--text2); border-color: var(--border); }
+  .btn-danger  { background: var(--red-dim); color: var(--red); border-color: rgba(224,80,80,0.3); }
+  .btn-sm      { padding: 8px 14px; font-size: 13px; min-height: 38px; }
+
+  .btn-icon {
+    width: 44px; height: 44px;    /* Apple HIG: min 44x44 */
+    padding: 0;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .btn-icon:active { transform: scale(0.9); background: var(--surface); }
+  @media (hover: hover) {
+    .btn-icon:hover { background: var(--surface); color: var(--text); }
+  }
+
+  /* ── Input — IMPORTANTE: font-size ≥ 16px evita zoom iOS ── */
+  .input {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 16px;           /* ≥ 16px = no zoom automatico iOS */
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .input::placeholder { color: var(--text3); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+  }
+
+  /* ── Checkbox ── */
+  .check-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    min-height: 44px;          /* touch target */
+    padding: 4px 0;
+  }
+  .check-box {
+    width: 22px; height: 22px; /* leggermente più grande per touch */
+    border: 2px solid var(--border2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .check-box.checked { background: var(--green); border-color: var(--green); }
+
+  /* ── Category chip ── */
+  .chip {
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    background: transparent;
+    white-space: nowrap;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .chip:active { opacity: 0.75; transform: scale(0.96); }
+  .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  @media (hover: hover) {
+    .chip:hover { border-color: var(--border2); color: var(--text); }
+  }
+
+  /* ── Chips scroll row — nascondi scrollbar su iOS ── */
+  .chips-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .chips-row::-webkit-scrollbar { display: none; }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); width: 100%; }
+
+  /* ── Stat card ── */
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── Stepper — più grande su mobile ── */
+  .stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .stepper-btn {
+    width: 52px; height: 52px;     /* grande per tocco preciso */
+    background: transparent;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .stepper-btn:active { background: var(--surface); color: var(--text); }
+  .stepper-val {
+    flex: 1;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    border: none;
+    background: transparent;
+    outline: none;
+    min-width: 0;
+  }
+  .stepper-val::-webkit-inner-spin-button,
+  .stepper-val::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .stepper-val[type=number] { -moz-appearance: textfield; }
+
+  /* ── Mobile tab bar (dipendente + admin) ── */
+  .mobile-tabs {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    background: rgba(14,13,11,0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    /* safe area home indicator iPhone + padding extra Safari */
+    padding-bottom: max(var(--safe-bottom), 4px);
+    /* hardware acceleration per evitare flickering su iOS */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  .mobile-tabs-inner {
+    display: flex;
+    align-items: stretch;
+    height: 56px;
+  }
+  .mobile-tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s;
+    padding: 6px 4px 2px;
+    position: relative;
+  }
+  .mobile-tab-btn.active { color: var(--accent); }
+  .mobile-tab-btn .tab-dot {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 14px);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ── Padding per contenuto sopra bottom tab bar ── */
+  .has-mobile-tabs { padding-bottom: calc(56px + var(--safe-bottom) + 20px) !important; }
+
+  /* ── Header padding safe area top ── */
+  .header-safe {
+    padding-top: var(--safe-top);
+    /* Forza hardware acceleration su iOS per sticky */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  .header-inner {
+    height: 56px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ── Admin card mobile ── */
+  .order-card-mobile {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: background 0.12s;
+    animation: fadeUp 0.3s both;
+  }
+  .order-card-mobile:active { background: var(--surface); }
+  .order-card-mobile:last-child { border-bottom: none; }
+
+  /* ── Responsive breakpoints ── */
+  @media (max-width: 768px) {
+    .hide-mobile   { display: none !important; }
+    .show-mobile   { display: flex !important; }
+    .mobile-tabs   { display: flex !important; flex-direction: column; }
+    .employee-grid { grid-template-columns: 1fr !important; }
+    /* 2 colonne su mobile: 4 card evase/attesa/totale/% formano griglia 2×2 */
+    .stat-grid     { grid-template-columns: repeat(2, 1fr) !important; }
+    .login-padding { padding: 20px 16px !important; }
+  }
+
+  @media (max-width: 400px) {
+    .stat-value    { font-size: 22px !important; }
+    .login-title   { font-size: 28px !important; }
+  }
+
+  /* ── Tablet (769px–1024px): spaziatura e griglia ottimizzate ── */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .employee-grid { grid-template-columns: 1fr 280px !important; }
+  }
+
+  /* ── Landscape su telefono: stat su 4 colonne ── */
+  @media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+    .stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
+    .has-mobile-tabs { padding-bottom: calc(48px + var(--safe-bottom) + 4px) !important; }
+    .mobile-tabs-inner { height: 44px; }
+  }
+
+  /* ── Quick login grid — 1 colonna su telefoni molto piccoli ── */
+  .quick-login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 360px) { .quick-login-grid { grid-template-columns: 1fr; } }
+
+  /* ── Select con freccia visibile su iOS/Android ── */
+  .select-native {
+    width: 100%;
+    padding: 13px 36px 13px 16px;
+    background: var(--bg2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6450' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .select-native:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+  /* ── iOS: evita zoom su TUTTI gli elementi di form (≥ 16px) ── */
+  select, textarea {
+    font-size: 16px !important;
+    font-family: var(--font-ui);
+  }
+
+  /* ── Toast: sopra la tab bar su mobile ── */
+  @media (max-width: 768px) {
+    .toast-container { bottom: calc(72px + var(--safe-bottom)) !important; }
+  }
+
+  /* ── Mobile: stat card più compatta ── */
+  @media (max-width: 768px) {
+    .stat-card { padding: 14px !important; }
+    .stat-value { font-size: 24px !important; }
+  }
+
+  /* ── Admin stats panel (mobile standalone) ── */
+  .stats-panel-mobile {
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── show-mobile: nascosto su desktop, visibile solo su mobile ── */
+  .show-mobile { display: none; }
+
+  /* ── Touch devices: feedback visivo al tocco su tutti gli elementi interattivi ── */
+  @media (hover: none) and (pointer: coarse) {
+    button:active, [role="button"]:active {
+      opacity: 0.72;
+      transform: scale(0.97);
+      transition: transform 0.06s, opacity 0.06s;
+    }
+    /* Non sovrascrivere btn che hanno già il proprio active */
+    .btn:active { transform: scale(0.96) !important; opacity: 0.85 !important; }
+    .btn-icon:active { transform: scale(0.9) !important; }
+  }
+
+  /* ── Prodotto card: bordo accent al tocco su mobile ── */
+  @media (hover: none) {
+    .product-card:active {
+      border-color: var(--border2) !important;
+      background: var(--surface) !important;
+    }
+  }
+
+  /* ── Seleziona testo: no su pulsanti ── */
+  button, .chip, .btn, .btn-icon { -webkit-user-select: none; user-select: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Tweaks Panel (inlined) -->
+<script type="text/babel">
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;scrollbar-width:thin}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;}
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+`;
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null ? keyOrEdits : { [keyOrEdits]: val };
+    setValues(prev => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+  const clamp = React.useCallback(() => {
+    const p = dragRef.current; if (!p) return;
+    const maxR = Math.max(PAD, window.innerWidth  - p.offsetWidth  - PAD);
+    const maxB = Math.max(PAD, window.innerHeight - p.offsetHeight - PAD);
+    offsetRef.current = { x: Math.min(maxR, Math.max(PAD, offsetRef.current.x)), y: Math.min(maxB, Math.max(PAD, offsetRef.current.y)) };
+    p.style.right  = offsetRef.current.x + 'px';
+    p.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+  React.useEffect(() => {
+    if (!open) return;
+    clamp();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(clamp) : null;
+    if (ro) { ro.observe(document.documentElement); return () => ro.disconnect(); }
+    window.addEventListener('resize', clamp); return () => window.removeEventListener('resize', clamp);
+  }, [open, clamp]);
+  React.useEffect(() => {
+    const h = e => { const t = e?.data?.type; if (t==='__activate_edit_mode') setOpen(true); else if (t==='__deactivate_edit_mode') setOpen(false); };
+    window.addEventListener('message', h);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', h);
+  }, []);
+  const dismiss = () => { setOpen(false); window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); };
+  const onDrag = e => {
+    const p = dragRef.current; if (!p) return;
+    const r = p.getBoundingClientRect(), sx = e.clientX;
+    const sR = window.innerWidth - r.right, sB = window.innerHeight - r.bottom;
+    const mv = ev => { offsetRef.current = { x: sR-(ev.clientX-sx), y: sB-(ev.clientY-e.clientY) }; clamp(); };
+    const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+  };
+  if (!open) return null;
+  return (<><style>{__TWEAKS_STYLE}</style><div ref={dragRef} className="twk-panel" style={{ right:offsetRef.current.x, bottom:offsetRef.current.y }}><div className="twk-hd" onMouseDown={onDrag}><b>{title}</b><button className="twk-x" onMouseDown={e=>e.stopPropagation()} onClick={dismiss}>✕</button></div><div className="twk-body">{children}</div></div></>);
+}
+function TweakSection({ label }) { return <div className="twk-sect">{label}</div>; }
+function TweakToggle({ label, value, onChange }) {
+  return (<div className="twk-row twk-row-h"><div className="twk-lbl"><span>{label}</span></div><button type="button" className="twk-toggle" data-on={value?'1':'0'} role="switch" aria-checked={!!value} onClick={()=>onChange(!value)}><i/></button></div>);
+}
+function TweakRadio({ label, value, options, onChange }) {
+  const ref = React.useRef(null), [drag, setDrag] = React.useState(false);
+  const opts = options.map(o => typeof o==='object'?o:{value:o,label:o});
+  const idx = Math.max(0, opts.findIndex(o=>o.value===value)), n = opts.length;
+  const vRef = React.useRef(value); vRef.current = value;
+  const segAt = x => { const r=ref.current.getBoundingClientRect(); return opts[Math.max(0,Math.min(n-1,Math.floor(((x-r.left-2)/(r.width-4))*n)))].value; };
+  const onPD = e => { setDrag(true); const v0=segAt(e.clientX); if(v0!==vRef.current) onChange(v0); const mv=ev=>{if(!ref.current)return;const v=segAt(ev.clientX);if(v!==vRef.current)onChange(v);}; const up=()=>{setDrag(false);window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);}; window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up); };
+  return (<div className="twk-row"><div className="twk-lbl"><span>{label}</span></div><div ref={ref} role="radiogroup" onPointerDown={onPD} className={drag?'twk-seg dragging':'twk-seg'}><div className="twk-seg-thumb" style={{left:`calc(2px + ${idx}*(100% - 4px)/${n})`,width:`calc((100% - 4px)/${n})`}}/>{opts.map(o=><button key={o.value} type="button" role="radio" aria-checked={o.value===value}>{o.label}</button>)}</div></div>);
+}
+function TweakColor({ label, value, onChange }) {
+  return (<div className="twk-row twk-row-h"><div className="twk-lbl"><span>{label}</span></div><input type="color" className="twk-swatch" value={value} onChange={e=>onChange(e.target.value)}/></div>);
+}
+Object.assign(window, { useTweaks, TweaksPanel, TweakSection, TweakToggle, TweakRadio, TweakColor });
+</script>
+
+<!-- App principale -->
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ─── Hook: rileva se mobile ─────────────────────────── */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= breakpoint);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener('resize', fn, { passive: true });
+    return () => window.removeEventListener('resize', fn);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+/* ─── Persistenza locale ────────────────────────────── */
+function loadLS(key, fallback) {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; }
+  catch { return fallback; }
+}
+function saveLS(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+/* ─── Firebase (sync cross-device) ──────────────────────
+   1. Vai su https://console.firebase.google.com
+   2. Crea progetto → Realtime Database → Crea database
+   3. Regole: { "rules": { ".read": true, ".write": true } }
+   4. Incolla qui il tuo config (Impostazioni progetto → App web)
+*/
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD4z-YTGrkN5wuFBcIkjTNhxPrJJaDfeqI",
+  authDomain: "newsportingmagazine.firebaseapp.com",
+  databaseURL: "https://newsportingmagazine-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "newsportingmagazine",
+  storageBucket: "newsportingmagazine.firebasestorage.app",
+  messagingSenderId: "333651771293",
+  appId: "1:333651771293:web:be82b1ee5fbdf92d14b974"
+};
+const FB_ENABLED = !!(typeof firebase !== 'undefined' && FIREBASE_CONFIG.databaseURL);
+let _db = null;
+if (FB_ENABLED) {
+  try { firebase.initializeApp(FIREBASE_CONFIG); } catch {}
+  try { _db = firebase.database(); } catch(e) { console.warn('Firebase:', e.message); }
+}
+
+/* ─── Dati ──────────────────────────────────────────── */
+const INITIAL_PRODUCTS = [
+  { id:1,  name:'Zucchero',            category:'Dispensa',  unit:'kg' },
+  { id:2,  name:'Sale',                category:'Dispensa',  unit:'kg' },
+  { id:3,  name:'Farina',              category:'Dispensa',  unit:'kg' },
+  { id:4,  name:"Olio d'oliva",        category:'Dispensa',  unit:'L' },
+  { id:5,  name:'Caffè',               category:'Bevande',   unit:'kg' },
+  { id:6,  name:'Latte',               category:'Bevande',   unit:'L' },
+  { id:7,  name:'Acqua frizzante',     category:'Bevande',   unit:'casse' },
+  { id:8,  name:'Acqua naturale',      category:'Bevande',   unit:'casse' },
+  { id:9,  name:'Vino rosso',          category:'Bevande',   unit:'bottiglie' },
+  { id:10, name:'Piatti di plastica',  category:'Monouso',   unit:'pz' },
+  { id:11, name:'Bicchieri',           category:'Monouso',   unit:'pz' },
+  { id:12, name:'Posate',              category:'Monouso',   unit:'set' },
+  { id:13, name:'Tovaglioli',          category:'Monouso',   unit:'pz' },
+  { id:14, name:'Carta forno',         category:'Cucina',    unit:'rotoli' },
+  { id:15, name:'Guanti monouso',      category:'Cucina',    unit:'conf' },
+  { id:16, name:'Pellicola',           category:'Cucina',    unit:'rotoli' },
+  { id:17, name:'Detergente piatti',   category:'Pulizie',   unit:'L' },
+  { id:18, name:'Detersivo pavimenti', category:'Pulizie',   unit:'L' },
+  { id:19, name:'Candeggina',          category:'Pulizie',   unit:'L' },
+  { id:20, name:'Panni microfibra',    category:'Pulizie',   unit:'pz' },
+  { id:21, name:'Carta igienica',      category:'Pulizie',   unit:'rotoli' },
+  { id:22, name:'Pomodori pelati',     category:'Alimenti',  unit:'kg' },
+  { id:23, name:'Passata di pomodoro', category:'Alimenti',  unit:'kg' },
+  { id:24, name:'Pasta secca',         category:'Alimenti',  unit:'kg' },
+  { id:25, name:'Riso',                category:'Alimenti',  unit:'kg' },
+];
+const USERS = [
+  { id:1, name:'Enrico',    password:'Enrico123',    role:'employee' },
+  { id:2, name:'Francesca', password:'Francesca123', role:'employee' },
+  { id:3, name:'Diego',     password:'Diego123',     role:'employee' },
+  { id:4, name:'Andrea',    password:'Andrea123',    role:'employee' },
+  { id:5, name:'Yuri',      password:'Yuri123',      role:'employee' },
+  { id:6, name:'Donatella', password:'Donatella123', role:'employee' },
+  { id:7, name:'Admin',     password:'admin123',     role:'admin' },
+];
+const INITIAL_ORDERS = [
+  { id:101, productId:1,  productName:'Zucchero',          quantity:5,   unit:'kg', userId:1, userName:'Enrico',    date:new Date(Date.now()-3600000*2).toISOString(),  status:'pending', note:'' },
+  { id:102, productId:5,  productName:'Caffè',              quantity:2,   unit:'kg', userId:3, userName:'Diego',     date:new Date(Date.now()-3600000*5).toISOString(),  status:'done',    note:'Urgente' },
+  { id:103, productId:10, productName:'Piatti di plastica', quantity:200, unit:'pz', userId:2, userName:'Francesca', date:new Date(Date.now()-3600000*24).toISOString(), status:'pending', note:'' },
+  { id:104, productId:17, productName:'Detergente piatti',  quantity:3,   unit:'L',  userId:6, userName:'Donatella', date:new Date(Date.now()-3600000*26).toISOString(), status:'pending', note:'Quasi finito' },
+];
+const PRODUCT_CATEGORIES = ['Dispensa', 'Bevande', 'Monouso', 'Cucina', 'Pulizie', 'Alimenti'];
+const CATEGORIES = ['Tutti', ...PRODUCT_CATEGORIES];
+
+/* ─── Utils ─────────────────────────────────────────── */
+function formatDate(iso) {
+  const d = new Date(iso), now = new Date(), diff = (now - d) / 1000;
+  if (diff < 3600)  return `${Math.floor(diff/60)} min fa`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h fa`;
+  return d.toLocaleDateString('it-IT', { day:'2-digit', month:'short' });
+}
+let _nextId = loadLS('ns_nextid', 200);
+function genId() { _nextId++; saveLS('ns_nextid', _nextId); return _nextId; }
+
+/* ─── Icone ──────────────────────────────────────────── */
+const Icon = ({ name, size=16 }) => {
+  const s = { fill:'none', stroke:'currentColor', strokeLinecap:'round', strokeLinejoin:'round' };
+  const icons = {
+    search:  <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+    plus:    <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>,
+    minus:   <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2.5"><path d="M5 12h14"/></svg>,
+    trash:   <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
+    check:   <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>,
+    logout:  <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+    box:     <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+    clock:   <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    user:    <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    grid:    <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    list:    <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+    sort:    <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M3 6h18M6 12h12M9 18h6"/></svg>,
+    arrow:   <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+    package: <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>,
+    history: <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>,
+    pencil:  <svg width={size} height={size} viewBox="0 0 24 24" {...s} strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  };
+  return icons[name] || null;
+};
+
+/* ─── Toast ──────────────────────────────────────────── */
+function ToastContainer({ toasts }) {
+  return (
+    <div className="toast-container">
+      {toasts.map(t => (
+        <div key={t.id} className={`toast toast-${t.type}`}>{t.msg}</div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Login ──────────────────────────────────────────── */
+function LoginScreen({ onLogin, showToast }) {
+  const [nome, setNome] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setErr('');
+    if (!nome || !password) { setErr('Inserisci nome e password.'); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const user = USERS.find(u => u.name.toLowerCase() === nome.trim().toLowerCase() && u.password === password);
+      if (user) { showToast(`Benvenuto, ${user.name}!`, 'success'); onLogin(user); }
+      else { setErr('Nome o password non validi.'); setLoading(false); }
+    }, 600);
+  };
+
+  return (
+    <div className="login-padding" style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 20px', paddingTop:'calc(32px + env(safe-area-inset-top, 0px))' }}>
+      <div style={{ position:'fixed', top:'-10%', right:'-5%', width:'50vw', height:'50vw', maxWidth:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(232,160,32,0.07) 0%, transparent 70%)', pointerEvents:'none' }} />
+      <div style={{ position:'fixed', bottom:'-5%', left:'-5%', width:'40vw', height:'40vw', maxWidth:240, borderRadius:'50%', background:'radial-gradient(circle, rgba(76,175,118,0.05) 0%, transparent 70%)', pointerEvents:'none' }} />
+
+      <div className="anim-fadeUp" style={{ width:'100%', maxWidth:400 }}>
+        {/* Logo */}
+        <div style={{ textAlign:'center', marginBottom:36 }}>
+          <div style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:64, height:64, borderRadius:20, background:'var(--accent)', marginBottom:16 }}>
+            <Icon name="box" size={28} />
+          </div>
+          <h1 className="login-title" style={{ fontFamily:'var(--font-display)', fontSize:34, fontWeight:800, letterSpacing:'-0.02em' }}>Kombucha</h1>
+          <p style={{ color:'var(--text2)', fontSize:15, marginTop:6 }}>Gestione ordini New Sporting</p>
+        </div>
+
+        {/* Form */}
+        <div className="card" style={{ padding:'28px 24px' }}>
+          <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column', gap:18 }}>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Nome</label>
+              <input className="input" type="text" placeholder="Es. Enrico" value={nome}
+                onChange={e => setNome(e.target.value)} autoComplete="username"
+                autoCapitalize="words" autoCorrect="off" />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Password</label>
+              <input className="input" type="password" placeholder="••••••••" value={password}
+                onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+            </div>
+            {err && <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>}
+            <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop:2, height:52, fontSize:16 }}>
+              {loading ? 'Accesso in corso…' : 'Accedi →'}
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+function Header({ user, onLogout }) {
+  return (
+    <header className="header-safe" style={{ position:'sticky', top:0, zIndex:100, background:'rgba(14,13,11,0.88)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', borderBottom:'1px solid var(--border)', paddingLeft:'max(16px, env(safe-area-inset-left))', paddingRight:'max(16px, env(safe-area-inset-right))' }}>
+      <div className="header-inner" style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', gap:12 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:32, height:32, borderRadius:9, background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <Icon name="box" size={15} />
+          </div>
+          <span style={{ fontFamily:'var(--font-display)', fontWeight:800, fontSize:19, letterSpacing:'-0.01em' }}>Kombucha</span>
+        </div>
+
+        <div style={{ flex:1 }} />
+
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {/* Desktop: nome completo + badge ruolo */}
+          <div className="hide-mobile" style={{ textAlign:'right' }}>
+            <div style={{ fontSize:13, fontWeight:600 }}>{user.name}</div>
+            <div style={{ marginTop:2 }}>
+              <span className={`badge badge-${user.role==='admin'?'admin':'employee'}`} style={{ fontSize:10 }}>
+                {user.role === 'admin' ? 'Proprietario' : 'Dipendente'}
+              </span>
+            </div>
+          </div>
+          {/* Mobile: solo nome breve + badge compatto */}
+          <div className="show-mobile" style={{ alignItems:'center', gap:6 }}>
+            <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{user.name.split(' ')[0]}</span>
+            <span className={`badge badge-${user.role==='admin'?'admin':'employee'}`} style={{ fontSize:9 }}>
+              {user.role === 'admin' ? 'Admin' : 'Staff'}
+            </span>
+          </div>
+          <button className="btn-icon" onClick={onLogout} title="Esci" style={{ flexShrink:0 }}>
+            <Icon name="logout" size={16} />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ─── Modal ordine — bottom sheet su mobile ──────────── */
+function OrderModal({ product, onClose, onSubmit }) {
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <div
+      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', WebkitBackdropFilter:'blur(6px)', zIndex:500, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="anim-slideUp card"
+        style={{ width:'100%', maxWidth:500, padding:'28px 24px',
+          paddingBottom:'calc(28px + env(safe-area-inset-bottom, 0px))',
+          borderRadius:'24px 24px 0 0',
+          borderBottom:'none' }}>
+
+        {/* Handle bar visivo */}
+        <div style={{ width:40, height:4, borderRadius:2, background:'var(--border2)', margin:'0 auto 20px' }} />
+
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
+          <div>
+            <div style={{ fontSize:11, color:'var(--text2)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>Richiedi prodotto</div>
+            <h3 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:700 }}>{product.name}</h3>
+            <span className="badge badge-pending" style={{ marginTop:8, display:'inline-block' }}>{product.category}</span>
+          </div>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="divider" style={{ marginBottom:22 }} />
+
+        <div style={{ marginBottom:26 }}>
+          <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Note (opzionale)</label>
+          <input className="input" placeholder="Es. Urgente, quasi finito..." value={note}
+            onChange={e => setNote(e.target.value)} autoCapitalize="sentences" />
+        </div>
+
+        <div style={{ display:'flex', gap:10 }}>
+          <button className="btn btn-ghost" style={{ flex:1 }} onClick={onClose}>Annulla</button>
+          <button className="btn btn-primary" style={{ flex:2, fontSize:16 }} onClick={() => onSubmit(1, note)}>
+            Invia richiesta
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Modal nuovo prodotto ───────────────────────────── */
+function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
+  const [name, setName]         = useState(prefillName);
+  const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
+  const [unit, setUnit]         = useState('');
+  const [err, setErr]           = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const handleSubmit = () => {
+    if (!name.trim()) { setErr('Il nome è obbligatorio.'); return; }
+    onSubmit({ name: name.trim(), category, unit: unit.trim() });
+  };
+
+  return (
+    <div
+      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', WebkitBackdropFilter:'blur(6px)', zIndex:500, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="anim-slideUp card"
+        style={{ width:'100%', maxWidth:500, padding:'28px 24px',
+          paddingBottom:'calc(28px + env(safe-area-inset-bottom, 0px))',
+          borderRadius:'24px 24px 0 0', borderBottom:'none' }}>
+
+        {/* Handle */}
+        <div style={{ width:40, height:4, borderRadius:2, background:'var(--border2)', margin:'0 auto 20px' }} />
+
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
+          <div>
+            <div style={{ fontSize:11, color:'var(--text2)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>Aggiungi al catalogo</div>
+            <h3 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:700 }}>Nuovo prodotto</h3>
+          </div>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="divider" style={{ marginBottom:22 }} />
+
+        <div style={{ display:'flex', flexDirection:'column', gap:16, marginBottom:26 }}>
+          {/* Nome */}
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+              Nome prodotto *
+            </label>
+            <input className="input" placeholder="Es. Aceto balsamico"
+              value={name} onChange={e => { setName(e.target.value); setErr(''); }}
+              autoCapitalize="sentences" />
+          </div>
+
+          {/* Categoria */}
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+              Categoria *
+            </label>
+            <select
+              className="select-native"
+              value={category}
+              onChange={e => setCategory(e.target.value)}>
+              {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Unità */}
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+              Unità di misura <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
+            </label>
+            <input className="input" placeholder="Es. kg, L, pz, conf..."
+              value={unit} onChange={e => setUnit(e.target.value)} />
+          </div>
+
+          {err && (
+            <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>
+          )}
+        </div>
+
+        <div style={{ display:'flex', gap:10 }}>
+          <button className="btn btn-ghost" style={{ flex:1 }} onClick={onClose}>Annulla</button>
+          <button className="btn btn-primary" style={{ flex:2, fontSize:16 }} onClick={handleSubmit}>
+            <Icon name="plus" size={16} /> Aggiungi prodotto
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Vista dipendente ───────────────────────────────── */
+function EmployeeView({ user, orders, products, onAddOrder, onAddProduct }) {
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState('prodotti'); // 'prodotti' | 'richieste'
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('Tutti');
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+
+  const myOrders = orders.filter(o => o.userId === user.id).slice(0, 20);
+  const pendingCount = myOrders.filter(o => o.status === 'pending').length;
+
+  const handleNewProduct = ({ name, category: cat, unit }) => {
+    onAddProduct({ name, category: cat, unit });
+    setShowNewProduct(false);
+    setSearch('');
+    setCategory(cat);
+  };
+
+  const filtered = products.filter(p => {
+    const matchCat = category === 'Tutti' || p.category === category;
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  const handleSubmit = (qty, note) => {
+    onAddOrder({ product: selectedProduct, qty, note, user });
+    setSelectedProduct(null);
+    if (isMobile) setMobileTab('richieste'); // vai alle richieste dopo aver inviato
+  };
+
+  const showProducts  = !isMobile || mobileTab === 'prodotti';
+  const showRequests  = !isMobile || mobileTab === 'richieste';
+
+  return (
+    <div style={{ maxWidth:1200, margin:'0 auto', padding:'20px 16px', overflowX:'hidden' }} className={isMobile ? 'has-mobile-tabs' : ''}>
+      <div className="employee-grid" style={{ display:'grid', gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : '1fr 320px', gap:24, alignItems:'start' }}>
+
+        {/* Colonna sinistra: prodotti */}
+        {showProducts && (
+          <div className="anim-fadeUp" style={{ minWidth:0 }}>
+            <div style={{ marginBottom: isMobile ? 12 : 18 }}>
+              <h2 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 20 : 24, fontWeight:700, marginBottom:4 }}>
+                {isMobile ? 'Prodotti' : 'Richiedi un prodotto'}
+              </h2>
+              {!isMobile && <p style={{ color:'var(--text2)', fontSize:14 }}>Seleziona un prodotto e indica la quantità mancante.</p>}
+            </div>
+
+            {/* Barra ricerca */}
+            <div style={{ position:'relative', marginBottom:14 }}>
+              <span style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' }}>
+                <Icon name="search" size={16} />
+              </span>
+              <input className="input" style={{ paddingLeft:42 }} placeholder="Cerca prodotto..."
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+
+            {/* Categorie — scrollabili orizzontalmente su mobile */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16, overflow:'hidden' }}>
+              <div className="chips-row" style={{ flex:1, minWidth:0 }}>
+                {CATEGORIES.map(c => (
+                  <button key={c} className={`chip ${category===c?'active':''}`} onClick={() => setCategory(c)}>{c}</button>
+                ))}
+              </div>
+              <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                {!isMobile && (
+                  <>
+                    <button className="btn-icon" onClick={() => setViewMode('grid')}
+                      style={{ background:viewMode==='grid'?'var(--surface)':'transparent', color:viewMode==='grid'?'var(--text)':'var(--text3)', width:36, height:36 }}>
+                      <Icon name="grid" size={13} />
+                    </button>
+                    <button className="btn-icon" onClick={() => setViewMode('list')}
+                      style={{ background:viewMode==='list'?'var(--surface)':'transparent', color:viewMode==='list'?'var(--text)':'var(--text3)', width:36, height:36 }}>
+                      <Icon name="list" size={13} />
+                    </button>
+                  </>
+                )}
+                <button className="btn-icon" onClick={() => setShowNewProduct(true)}
+                  title="Aggiungi nuovo prodotto"
+                  style={{ width:36, height:36, background:'var(--accent-dim)', borderColor:'rgba(232,160,32,0.3)', color:'var(--accent)' }}>
+                  <Icon name="plus" size={15} />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ fontSize:12, color:'var(--text3)', marginBottom:12 }}>{filtered.length} prodotti trovati</div>
+
+            {/* Griglia prodotti — 2 colonne su mobile, auto-fill su desktop */}
+            {(viewMode === 'grid' || isMobile) ? (
+              <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(auto-fill, minmax(155px,1fr))', gap: isMobile ? 8 : 10 }}>
+                {filtered.map((p, i) => (
+                  <button key={p.id} onClick={() => setSelectedProduct(p)}
+                    className="anim-fadeUp product-card"
+                    style={{ animationDelay:`${Math.min(i,10)*20}ms`, background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding: isMobile ? '14px 12px' : '16px 14px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', fontFamily:'var(--font-ui)', minHeight:80, width:'100%', minWidth:0, overflow:'hidden' }}
+                    onMouseEnter={e => { if (window.matchMedia('(hover:hover)').matches) { e.currentTarget.style.borderColor='var(--border2)'; e.currentTarget.style.background='var(--surface)'; }}}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='var(--bg2)'; }}>
+                    <div style={{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:5 }}>{p.category}</div>
+                    <div style={{ fontSize: isMobile ? 13 : 14, fontWeight:600, color:'var(--text)', marginBottom:8, lineHeight:1.3, overflowWrap:'break-word', wordBreak:'break-word' }}>{p.name}</div>
+                    <div style={{ fontSize:11, color:'var(--text2)', display:'flex', alignItems:'center', gap:4 }}>
+                      <span style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent)', display:'inline-block', flexShrink:0 }} />
+                      {p.unit}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {filtered.map((p, i) => (
+                  <button key={p.id} onClick={() => setSelectedProduct(p)}
+                    className="anim-fadeUp"
+                    style={{ animationDelay:`${Math.min(i,10)*15}ms`, background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'13px 16px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', fontFamily:'var(--font-ui)', display:'flex', alignItems:'center', gap:12, minHeight:54 }}
+                    onMouseEnter={e => { if (window.matchMedia('(hover:hover)').matches) { e.currentTarget.style.borderColor='var(--border2)'; e.currentTarget.style.background='var(--surface)'; }}}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='var(--bg2)'; }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <span style={{ fontWeight:600, fontSize:14 }}>{p.name}</span>
+                      <span style={{ color:'var(--text3)', fontSize:12, marginLeft:8 }}>{p.category}</span>
+                    </div>
+                    <span style={{ fontSize:12, color:'var(--text2)', background:'var(--surface2)', padding:'3px 9px', borderRadius:999, flexShrink:0 }}>{p.unit}</span>
+                    <Icon name="plus" size={14} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {filtered.length === 0 && (
+              <div style={{ textAlign:'center', padding:'48px 20px', color:'var(--text3)' }}>
+                <div style={{ fontSize:40, marginBottom:10 }}>🔍</div>
+                <div style={{ fontSize:15, marginBottom:16 }}>Nessun prodotto per "{search}"</div>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowNewProduct(true)}
+                  style={{ display:'inline-flex' }}>
+                  <Icon name="plus" size={15} /> Aggiungi "{search}"
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Colonna destra: le mie richieste */}
+        {showRequests && (
+          <div className="anim-fadeUp" style={{ animationDelay:'100ms' }}>
+            <div style={{ position: isMobile ? 'static' : 'sticky', top:80 }}>
+              <div style={{ marginBottom:14 }}>
+                <h3 style={{ fontWeight:700, fontSize:17 }}>Le mie richieste</h3>
+                <p style={{ color:'var(--text2)', fontSize:13, marginTop:3 }}>Aggiornate in tempo reale</p>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {myOrders.length === 0 ? (
+                  <div className="card" style={{ textAlign:'center', color:'var(--text3)', fontSize:14, padding:'32px 20px' }}>
+                    Nessuna richiesta ancora.<br />
+                    <span style={{ color:'var(--accent)', marginTop:8, display:'block', fontSize:13 }}>
+                      {isMobile ? 'Vai su Prodotti per iniziare.' : 'Seleziona un prodotto per iniziare.'}
+                    </span>
+                  </div>
+                ) : myOrders.map(o => (
+                  <div key={o.id} className="card" style={{ padding:'14px 16px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, marginBottom:8 }}>
+                      <span style={{ fontWeight:600, fontSize:15 }}>{o.productName}</span>
+                      <span className={`badge badge-${o.status==='done'?'done':'pending'}`} style={{ flexShrink:0 }}>
+                        {o.status === 'done' ? '✓ Ordinato' : 'In attesa'}
+                      </span>
+                    </div>
+                    <div style={{ display:'flex', gap:14, fontSize:13, color:'var(--text2)' }}>
+                      <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, color:'var(--text)' }}>{o.quantity} {o.unit}</span>
+                      <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="clock" size={12} />{formatDate(o.date)}</span>
+                    </div>
+                    {o.note && <div style={{ fontSize:12, color:'var(--text3)', borderTop:'1px solid var(--border)', paddingTop:8, marginTop:8 }}>"{o.note}"</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal ordine */}
+      {selectedProduct && (
+        <OrderModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onSubmit={handleSubmit} />
+      )}
+
+      {/* Modal nuovo prodotto */}
+      {showNewProduct && (
+        <NewProductModal
+          prefillName={filtered.length === 0 ? search : ''}
+          onClose={() => setShowNewProduct(false)}
+          onSubmit={handleNewProduct}
+        />
+      )}
+
+      {/* Bottom tab bar mobile */}
+      {isMobile && (
+        <div className="mobile-tabs">
+          <div className="mobile-tabs-inner">
+            <button className={`mobile-tab-btn ${mobileTab==='prodotti'?'active':''}`} onClick={() => setMobileTab('prodotti')}>
+              <Icon name="package" size={20} />
+              Prodotti
+            </button>
+            <button
+              className="mobile-tab-btn"
+              onClick={() => setShowNewProduct(true)}
+              style={{ color:'var(--accent)' }}>
+              <div style={{ width:34, height:34, borderRadius:'50%', background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:1 }}>
+                <Icon name="plus" size={18} />
+              </div>
+            </button>
+            <button className={`mobile-tab-btn ${mobileTab==='richieste'?'active':''}`} onClick={() => setMobileTab('richieste')}>
+              <Icon name="list" size={20} />
+              Richieste
+              {pendingCount > 0 && <span className="tab-dot" />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Admin: riga ordine ─────────────────────────────── */
+function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) {
+  const [confirm, setConfirm] = useState(false);
+  const isDone = o.status === 'done';
+
+  /* Vista card su mobile */
+  if (isMobile) {
+    return (
+      <div className="order-card-mobile" style={{ animationDelay:`${Math.min(index,8)*30}ms`, borderLeft:`3px solid ${isDone?'var(--green)':'var(--accent)'}` }}>
+        {/* Riga principale */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontWeight:700, fontSize:16, marginBottom:4, color:'var(--text)' }}>{o.productName}</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 12px', fontSize:13, color:'var(--text2)' }}>
+              <span style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:15, color:'var(--text)' }}>{o.quantity} <span style={{ fontSize:11, fontFamily:'var(--font-ui)', fontWeight:400, color:'var(--text2)' }}>{o.unit}</span></span>
+              <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="user" size={11} />{o.userName}</span>
+              <span style={{ display:'flex', alignItems:'center', gap:3 }}><Icon name="clock" size={11} />{formatDate(o.date)}</span>
+            </div>
+            {o.note && <div style={{ fontSize:12, color:'var(--text3)', marginTop:6, fontStyle:'italic', lineHeight:1.4 }}>"{o.note}"</div>}
+          </div>
+          <span className={`badge badge-${isDone?'done':'pending'}`} style={{ flexShrink:0, marginTop:2 }}>
+            {isDone ? 'Evaso' : 'Attesa'}
+          </span>
+        </div>
+
+        {/* Azioni */}
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button
+            className={`btn btn-sm ${isDone ? 'btn-ghost' : 'btn-primary'}`}
+            style={{ flex:1, minHeight:44, fontSize:14 }}
+            onClick={() => onUpdateStatus(o.id)}>
+            <Icon name="check" size={15} />
+            {isDone ? 'Riapri' : 'Segna evaso'}
+          </button>
+          {confirm ? (
+            <div style={{ display:'flex', gap:6 }}>
+              <button className="btn btn-sm btn-danger" style={{ minHeight:44 }} onClick={() => { onDeleteOrder(o.id); setConfirm(false); }}>Elimina</button>
+              <button className="btn btn-sm btn-ghost"  style={{ minHeight:44 }} onClick={() => setConfirm(false)}>No</button>
+            </div>
+          ) : (
+            <button className="btn-icon" style={{ width:44, height:44, flexShrink:0 }} onClick={() => setConfirm(true)}>
+              <Icon name="trash" size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* Vista tabella su desktop */
+  return (
+    <div className="anim-fadeUp"
+      style={{ animationDelay:`${Math.min(index,8)*25}ms`, display:'grid', gridTemplateColumns:'1fr 90px 140px 110px 120px 80px', gap:12, padding:'14px 18px', borderBottom:'1px solid var(--border)', alignItems:'center', transition:'background 0.12s' }}
+      onMouseEnter={e => e.currentTarget.style.background='var(--surface)'}
+      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+      <div>
+        <div style={{ fontWeight:600, fontSize:14 }}>{o.productName}</div>
+        {o.note && <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>"{o.note}"</div>}
+      </div>
+      <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14 }}>
+        {o.quantity} <span style={{ fontFamily:'var(--font-ui)', fontSize:11, color:'var(--text2)', fontWeight:400 }}>{o.unit}</span>
+      </div>
+      <div style={{ fontSize:13, color:'var(--text2)' }}>{o.userName}</div>
+      <div style={{ fontSize:12, color:'var(--text2)', display:'flex', alignItems:'center', gap:4 }}>
+        <Icon name="clock" size={11} />{formatDate(o.date)}
+      </div>
+      <div>
+        <label className="check-wrap">
+          <div className={`check-box ${isDone?'checked':''}`} onClick={() => onUpdateStatus(o.id)}>
+            {isDone && <Icon name="check" size={11} />}
+          </div>
+          <span style={{ fontSize:12, color:isDone?'var(--green)':'var(--text2)' }}>
+            {isDone ? 'Ordinato' : 'In attesa'}
+          </span>
+        </label>
+      </div>
+      <div style={{ display:'flex', justifyContent:'flex-end' }}>
+        {confirm ? (
+          <div style={{ display:'flex', gap:4 }}>
+            <button className="btn btn-sm btn-danger" onClick={() => { onDeleteOrder(o.id); setConfirm(false); }}>Sì</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setConfirm(false)}>No</button>
+          </div>
+        ) : (
+          <button className="btn-icon" style={{ width:36, height:36 }} onClick={() => setConfirm(true)}>
+            <Icon name="trash" size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Modal modifica prodotto — bottom sheet su mobile ── */
+function EditProductModal({ product, onClose, onSubmit }) {
+  const [name, setName]         = useState(product.name);
+  const [category, setCategory] = useState(product.category);
+  const [unit, setUnit]         = useState(product.unit);
+  const [err, setErr]           = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const handleSubmit = () => {
+    if (!name.trim()) { setErr('Il nome è obbligatorio.'); return; }
+    onSubmit({ id: product.id, name: name.trim(), category, unit: unit.trim() });
+  };
+
+  return (
+    <div
+      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', WebkitBackdropFilter:'blur(6px)', zIndex:500, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="anim-slideUp card"
+        style={{ width:'100%', maxWidth:500, padding:'28px 24px',
+          paddingBottom:'calc(28px + env(safe-area-inset-bottom, 0px))',
+          borderRadius:'24px 24px 0 0', borderBottom:'none' }}>
+
+        <div style={{ width:40, height:4, borderRadius:2, background:'var(--border2)', margin:'0 auto 20px' }} />
+
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
+          <div>
+            <div style={{ fontSize:11, color:'var(--text2)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>Modifica prodotto</div>
+            <h3 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:700 }}>{product.name}</h3>
+          </div>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="divider" style={{ marginBottom:22 }} />
+
+        <div style={{ display:'flex', flexDirection:'column', gap:16, marginBottom:26 }}>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Nome prodotto *</label>
+            <input className="input" value={name}
+              onChange={e => { setName(e.target.value); setErr(''); }}
+              autoCapitalize="sentences" />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Categoria *</label>
+            <select className="select-native" value={category} onChange={e => setCategory(e.target.value)}>
+              {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+              Unità di misura <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
+            </label>
+            <input className="input" placeholder="Es. kg, L, pz, conf..."
+              value={unit} onChange={e => setUnit(e.target.value)} />
+          </div>
+          {err && <div style={{ fontSize:14, color:'var(--red)', padding:'10px 14px', background:'var(--red-dim)', borderRadius:10, border:'1px solid rgba(224,80,80,0.3)' }}>{err}</div>}
+        </div>
+
+        <div style={{ display:'flex', gap:10 }}>
+          <button className="btn btn-ghost" style={{ flex:1 }} onClick={onClose}>Annulla</button>
+          <button className="btn btn-primary" style={{ flex:2, fontSize:16 }} onClick={handleSubmit}>
+            <Icon name="check" size={16} /> Salva modifiche
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Admin: riga prodotto con modifica ed elimina ───── */
+function ProductRow({ product, onEdit, onDelete }) {
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <div
+      style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 16px', borderBottom:'1px solid var(--border)', transition:'background 0.12s', animation:'fadeUp 0.25s both' }}
+      onMouseEnter={e => { if (window.matchMedia('(hover:hover)').matches) e.currentTarget.style.background='var(--surface)'; }}
+      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+
+      {/* Info prodotto */}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontWeight:600, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{product.name}</div>
+        <div style={{ fontSize:12, color:'var(--text2)', marginTop:2, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          <span>{product.category}</span>
+          {product.unit && <span style={{ background:'var(--surface2)', padding:'1px 7px', borderRadius:999, flexShrink:0 }}>{product.unit}</span>}
+        </div>
+      </div>
+
+      {/* Azioni */}
+      <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
+        {confirm ? (
+          <>
+            <button className="btn btn-sm btn-danger" style={{ minHeight:36 }} onClick={() => { onDelete(product.id); setConfirm(false); }}>Elimina</button>
+            <button className="btn btn-sm btn-ghost"  style={{ minHeight:36 }} onClick={() => setConfirm(false)}>No</button>
+          </>
+        ) : (
+          <>
+            <button className="btn-icon" style={{ width:36, height:36, color:'var(--text2)' }} onClick={() => onEdit(product)} title="Modifica">
+              <Icon name="pencil" size={14} />
+            </button>
+            <button className="btn-icon" style={{ width:36, height:36 }} onClick={() => setConfirm(true)} title="Elimina">
+              <Icon name="trash" size={14} />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Vista Admin ────────────────────────────────────── */
+function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActiveTab, onAddProduct, products, onDeleteProduct, onEditProduct }) {
+  const isMobile = useIsMobile();
+  const [filter, setFilter] = useState('tutti');
+  const [sort, setSort] = useState('date-desc');
+  const [search, setSearch] = useState('');
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const handleNewProduct = ({ name, category, unit }) => {
+    onAddProduct({ name, category, unit });
+    setShowNewProduct(false);
+  };
+
+  const isArchive = activeTab === 'archivio';
+  const isStats   = isMobile && activeTab === 'stats';
+  const baseOrders = isArchive ? orders.filter(o => o.status === 'done') : orders;
+  const pending = orders.filter(o => o.status === 'pending');
+  const done    = orders.filter(o => o.status === 'done');
+
+  let displayed = baseOrders.filter(o => {
+    if (!isArchive && filter === 'pending') return o.status === 'pending';
+    if (!isArchive && filter === 'done') return o.status === 'done';
+    if (search) return o.productName.toLowerCase().includes(search.toLowerCase()) || o.userName.toLowerCase().includes(search.toLowerCase());
+    return true;
+  });
+  if (sort === 'date-desc') displayed = [...displayed].sort((a,b) => new Date(b.date)-new Date(a.date));
+  if (sort === 'date-asc')  displayed = [...displayed].sort((a,b) => new Date(a.date)-new Date(b.date));
+  if (sort === 'name')      displayed = [...displayed].sort((a,b) => a.productName.localeCompare(b.productName));
+
+  /* ── STATS PANEL (desktop sempre, mobile solo tab Statistiche) ── */
+  const StatsPanel = () => (
+    <div className="anim-fadeUp">
+      <div className="stat-grid" style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap:isMobile ? 10 : 12, marginBottom: isMobile ? 0 : 24 }}>
+        <div className="stat-card">
+          <div className="stat-value">{orders.length}</div>
+          <div className="stat-label">Totale</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value" style={{ color:'var(--accent)' }}>{pending.length}</div>
+          <div className="stat-label">In attesa</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value" style={{ color:'var(--green)' }}>{done.length}</div>
+          <div className="stat-label">Evase</div>
+        </div>
+        {isMobile && (
+          <div className="stat-card">
+            <div className="stat-value">{orders.length ? Math.round(done.length/orders.length*100) : 0}%</div>
+            <div className="stat-label">Tasso evasione</div>
+          </div>
+        )}
+      </div>
+
+      {/* Grafico a barre veloce su mobile stats */}
+      {isMobile && orders.length > 0 && (
+        <div className="card" style={{ marginTop:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:14 }}>Avanzamento</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {[['In attesa', pending.length, 'var(--accent)'], ['Evase', done.length, 'var(--green)']].map(([label, val, color]) => (
+              <div key={label}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:6 }}>
+                  <span style={{ color:'var(--text2)', fontWeight:600 }}>{label}</span>
+                  <span style={{ fontFamily:'var(--font-mono)', fontWeight:700 }}>{val}</span>
+                </div>
+                <div style={{ height:8, background:'var(--surface2)', borderRadius:4, overflow:'hidden' }}>
+                  <div style={{ height:'100%', width:`${Math.round(val/orders.length*100)}%`, background:color, borderRadius:4, transition:'width .6s cubic-bezier(.16,1,.3,1)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bottone nuovo prodotto */}
+      <button className="btn btn-primary" style={{ width:'100%', marginTop:isMobile ? 20 : 16 }} onClick={() => setShowNewProduct(true)}>
+        <Icon name="plus" size={16} /> Aggiungi prodotto al catalogo
+      </button>
+
+      {/* Catalogo prodotti — solo admin, con elimina */}
+      {(() => {
+        const filteredProducts = products.filter(p =>
+          p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+          p.category.toLowerCase().includes(productSearch.toLowerCase())
+        );
+        return (
+          <div className="card" style={{ marginTop:16, padding:0, overflow:'hidden' }}>
+            <div style={{ padding:'13px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', gap:10 }}>
+              <span style={{ fontWeight:700, fontSize:14 }}>Catalogo prodotti</span>
+              <span style={{ fontSize:12, color:'var(--text3)', fontFamily:'var(--font-mono)', background:'var(--surface2)', padding:'2px 8px', borderRadius:999 }}>{filteredProducts.length}</span>
+            </div>
+            <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--border)' }}>
+              <div style={{ position:'relative' }}>
+                <span style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' }}>
+                  <Icon name="search" size={14} />
+                </span>
+                <input className="input" style={{ paddingLeft:34, height:40, fontSize:14 }}
+                  placeholder="Cerca prodotto..."
+                  value={productSearch} onChange={e => setProductSearch(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ maxHeight: isMobile ? 320 : 220, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+              {filteredProducts.length === 0 ? (
+                <div style={{ padding:'24px 16px', textAlign:'center', color:'var(--text3)', fontSize:14 }}>Nessun prodotto trovato.</div>
+              ) : filteredProducts.map(p => (
+                <ProductRow key={p.id} product={p} onEdit={setEditingProduct} onDelete={onDeleteProduct} />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth:1100, margin:'0 auto', padding: isMobile ? '16px 14px' : '24px 20px' }} className={isMobile ? 'has-mobile-tabs' : ''}>
+
+      {/* Stats: desktop sempre (non archivio), mobile solo tab stats */}
+      {!isMobile && !isArchive && <StatsPanel />}
+      {isStats && <StatsPanel />}
+
+      {/* Titolo sezione su mobile */}
+      {isMobile && !isStats && (
+        <div style={{ marginBottom:14 }}>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700 }}>
+            {isArchive ? 'Archivio' : 'Ordini'}
+          </h2>
+          {!isArchive && pending.length > 0 && (
+            <p style={{ color:'var(--accent)', fontSize:13, marginTop:3 }}>
+              {pending.length} {pending.length === 1 ? 'richiesta in attesa' : 'richieste in attesa'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Tutto tranne stats: nascondi su mobile stats tab */}
+      {!isStats && (
+        <>
+          {/* Toolbar ricerca + filtri */}
+          <div className="anim-fadeUp" style={{ animationDelay:'60ms', display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:10, marginBottom:14, alignItems: isMobile ? 'stretch' : 'center', flexWrap:'wrap' }}>
+            {/* Ricerca — su mobile prende tutta la larghezza (flex column) */}
+            <div style={{ position:'relative', flex: isMobile ? '0 0 auto' : '1 1 220px' }}>
+              <span style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' }}>
+                <Icon name="search" size={15} />
+              </span>
+              <input className="input" style={{ paddingLeft:42 }} placeholder="Cerca prodotto o persona..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+
+            {/* Su mobile: chips su riga separata, poi sort */}
+            {isMobile ? (
+              <>
+                {!isArchive && (
+                  <div className="chips-row" style={{ gap:6 }}>
+                    {[['tutti','Tutti'],['pending','In attesa'],['done','Evasi']].map(([val, label]) => (
+                      <button key={val} className={`chip ${filter===val?'active':''}`} onClick={() => setFilter(val)}>{label}</button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <Icon name="sort" size={14} />
+                  <select className="select-native" style={{ flex:1 }} value={sort} onChange={e => setSort(e.target.value)}>
+                    <option value="date-desc">Più recenti</option>
+                    <option value="date-asc">Meno recenti</option>
+                    <option value="name">A–Z prodotto</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                {!isArchive && (
+                  <div className="chips-row" style={{ gap:6 }}>
+                    {[['tutti','Tutti'],['pending','In attesa'],['done','Evasi']].map(([val, label]) => (
+                      <button key={val} className={`chip ${filter===val?'active':''}`} onClick={() => setFilter(val)}>{label}</button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <Icon name="sort" size={13} />
+                  <select value={sort} onChange={e => setSort(e.target.value)}
+                    style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:8, color:'var(--text)', fontFamily:'var(--font-ui)', fontSize:16, padding:'9px 10px', outline:'none', cursor:'pointer', WebkitAppearance:'none', appearance:'none', minHeight:44 }}>
+                    <option value="date-desc">Più recenti</option>
+                    <option value="date-asc">Meno recenti</option>
+                    <option value="name">A–Z prodotto</option>
+                  </select>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowNewProduct(true)}
+                  style={{ flexShrink:0, borderColor:'rgba(232,160,32,0.3)', color:'var(--accent)', background:'var(--accent-dim)', minHeight:44 }}>
+                  <Icon name="plus" size={15} /> Nuovo prodotto
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Tabella / cards ordini */}
+          <div className="anim-fadeUp card" style={{ animationDelay:'120ms', padding:0, overflow:'hidden' }}>
+            {displayed.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'52px 20px', color:'var(--text3)' }}>
+                <div style={{ fontSize:36, marginBottom:10 }}>📋</div>
+                <div style={{ fontSize:15, marginBottom: isMobile ? 16 : 0 }}>
+                  Nessuna richiesta{filter!=='tutti' ? ' con questo stato' : ''}.
+                </div>
+                {isMobile && (
+                  <button className="btn btn-primary btn-sm" style={{ display:'inline-flex' }} onClick={() => setShowNewProduct(true)}>
+                    <Icon name="plus" size={14} /> Aggiungi prodotto
+                  </button>
+                )}
+              </div>
+            ) : isMobile ? (
+              /* Card layout su mobile */
+              <div>
+                {displayed.map((o, i) => (
+                  <OrderRow key={o.id} order={o} index={i} onUpdateStatus={onUpdateStatus} onDeleteOrder={onDeleteOrder} isMobile={true} />
+                ))}
+              </div>
+            ) : (
+              /* Tabella su desktop */
+              <div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 90px 140px 110px 120px 80px', gap:12, padding:'10px 18px', borderBottom:'1px solid var(--border)', fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                  <span>Prodotto</span><span>Qtà</span><span>Richiesto da</span><span>Data</span><span>Stato</span><span />
+                </div>
+                {displayed.map((o, i) => (
+                  <OrderRow key={o.id} order={o} index={i} onUpdateStatus={onUpdateStatus} onDeleteOrder={onDeleteOrder} isMobile={false} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop:10, fontSize:12, color:'var(--text3)', textAlign: isMobile ? 'center' : 'right' }}>
+            {displayed.length} richieste visualizzate
+          </div>
+        </>
+      )}
+
+      {/* Modal nuovo prodotto */}
+      {showNewProduct && (
+        <NewProductModal
+          onClose={() => setShowNewProduct(false)}
+          onSubmit={handleNewProduct}
+        />
+      )}
+
+      {/* Modal modifica prodotto */}
+      {editingProduct && (
+        <EditProductModal
+          product={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSubmit={({ id, name, category, unit }) => {
+            onEditProduct({ id, name, category, unit });
+            setEditingProduct(null);
+          }}
+        />
+      )}
+
+      {/* Bottom tab bar mobile — admin (3 tab) */}
+      {isMobile && (
+        <div className="mobile-tabs">
+          <div className="mobile-tabs-inner">
+            <button className={`mobile-tab-btn ${activeTab==='ordini'?'active':''}`} onClick={() => setActiveTab('ordini')}>
+              <Icon name="package" size={20} />
+              Ordini
+              {pending.length > 0 && <span className="tab-dot" />}
+            </button>
+            <button className={`mobile-tab-btn ${activeTab==='stats'?'active':''}`} onClick={() => setActiveTab('stats')}>
+              <Icon name="sort" size={20} />
+              Statistiche
+            </button>
+            <button className={`mobile-tab-btn ${activeTab==='archivio'?'active':''}`} onClick={() => setActiveTab('archivio')}>
+              <Icon name="history" size={20} />
+              Archivio
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Tweaks wrapper ─────────────────────────────────── */
+const TWEAK_DEFAULTS = { accentColor:'#e8a020', density:'normal', showNotes:true };
+
+function TweaksWrapper({ children }) {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent', t.accentColor);
+    const [r,g,b] = [1,3,5].map(i => parseInt(t.accentColor.slice(i,i+2),16));
+    document.documentElement.style.setProperty('--accent-dim', `rgba(${r},${g},${b},0.15)`);
+  }, [t.accentColor]);
+  return (
+    <>
+      {children}
+      <TweaksPanel>
+        <TweakSection label="Colore accento" />
+        <TweakColor label="Colore principale" value={t.accentColor} onChange={v => setTweak('accentColor', v)} />
+        <TweakSection label="Layout" />
+        <TweakRadio label="Densità UI" value={t.density} options={['compact','normal','spacious']} onChange={v => setTweak('density', v)} />
+        <TweakSection label="Contenuto" />
+        <TweakToggle label="Mostra note ordini" value={t.showNotes} onChange={v => setTweak('showNotes', v)} />
+      </TweaksPanel>
+    </>
+  );
+}
+
+/* ─── App Root ───────────────────────────────────────── */
+function App() {
+  const [user, setUser] = useState(null);
+  const [orders, setOrders] = useState(() => loadLS('ns_orders', INITIAL_ORDERS));
+  const [products, setProducts] = useState(() => loadLS('ns_products', INITIAL_PRODUCTS));
+  const [toasts, setToasts] = useState([]);
+  const [activeTab, setActiveTab] = useState('ordini');
+
+  /* ── Salva su localStorage (fallback senza Firebase) ── */
+  useEffect(() => { if (!FB_ENABLED) saveLS('ns_orders', orders); }, [orders]);
+  useEffect(() => { if (!FB_ENABLED) saveLS('ns_products', products); }, [products]);
+
+  /* ── Firebase: ascolta ordini e prodotti in tempo reale ── */
+  useEffect(() => {
+    if (!FB_ENABLED || !_db) return;
+    const ordRef = _db.ref('orders');
+    const proRef = _db.ref('products');
+
+    ordRef.on('value', snap => {
+      const data = snap.val() || {};
+      const list = Object.entries(data)
+        .map(([k, v]) => ({ ...v, id: k }))
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      setOrders(list);
+    });
+
+    proRef.on('value', snap => {
+      const data = snap.val();
+      if (data) {
+        setProducts(Object.entries(data).map(([k, v]) => ({ ...v, id: k })));
+      } else {
+        INITIAL_PRODUCTS.forEach(p => proRef.push(p));
+      }
+    });
+
+    return () => { ordRef.off(); proRef.off(); };
+  }, []);
+
+  const showToast = useCallback((msg, type='success') => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3200);
+  }, []);
+
+  const handleLogin  = u => setUser(u);
+  const handleLogout = () => { setUser(null); setActiveTab('ordini'); };
+
+  const handleAddOrder = ({ product, qty, note, user: u }) => {
+    const newOrder = {
+      productId: product.id, productName: product.name, quantity: qty,
+      unit: product.unit, userId: u.id, userName: u.name,
+      date: new Date().toISOString(), status: 'pending', note: note || '',
+    };
+    if (FB_ENABLED && _db) {
+      _db.ref('orders').push(newOrder);
+    } else {
+      setOrders(prev => [{ ...newOrder, id: genId() }, ...prev]);
+    }
+    showToast(`"${product.name}" — richiesta inviata!`, 'success');
+  };
+
+  const handleUpdateStatus = id => {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    const newStatus = o.status === 'done' ? 'pending' : 'done';
+    if (FB_ENABLED && _db) {
+      _db.ref(`orders/${id}`).update({ status: newStatus });
+    } else {
+      setOrders(prev => prev.map(x => x.id === id ? { ...x, status: newStatus } : x));
+    }
+    showToast(o.status === 'done' ? `"${o.productName}" riportato in attesa` : `"${o.productName}" segnato ordinato ✓`, 'success');
+  };
+
+  const handleDeleteOrder = id => {
+    const o = orders.find(x => x.id === id);
+    if (FB_ENABLED && _db) {
+      _db.ref(`orders/${id}`).remove();
+    } else {
+      setOrders(prev => prev.filter(x => x.id !== id));
+    }
+    if (o) showToast(`"${o.productName}" eliminato`, 'success');
+  };
+
+  const nextPidRef = useRef(INITIAL_PRODUCTS.length + 1);
+  const handleAddProduct = ({ name, category, unit }) => {
+    const existing = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existing) { showToast(`"${name}" è già nel catalogo`, 'error'); return existing; }
+    const base = { name, category, unit: unit || '' };
+    if (FB_ENABLED && _db) {
+      const ref = _db.ref('products').push(base);
+      showToast(`"${name}" aggiunto al catalogo!`, 'success');
+      return { ...base, id: ref.key };
+    } else {
+      const prod = { ...base, id: nextPidRef.current++ };
+      setProducts(prev => [...prev, prod]);
+      showToast(`"${name}" aggiunto al catalogo!`, 'success');
+      return prod;
+    }
+  };
+
+  const handleDeleteProduct = id => {
+    const p = products.find(x => x.id === id);
+    if (FB_ENABLED && _db) {
+      _db.ref(`products/${id}`).remove();
+    } else {
+      setProducts(prev => prev.filter(x => x.id !== id));
+    }
+    if (p) showToast(`"${p.name}" rimosso dal catalogo`, 'success');
+  };
+
+  const handleEditProduct = ({ id, name, category, unit }) => {
+    if (FB_ENABLED && _db) {
+      _db.ref(`products/${id}`).update({ name, category, unit });
+    } else {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, name, category, unit } : p));
+    }
+    showToast(`"${name}" aggiornato`, 'success');
+  };
+
+  if (!user) return (
+    <TweaksWrapper>
+      <LoginScreen onLogin={handleLogin} showToast={showToast} />
+      <ToastContainer toasts={toasts} />
+    </TweaksWrapper>
+  );
+
+  return (
+    <TweaksWrapper>
+      <Header user={user} onLogout={handleLogout} />
+      {user.role === 'employee'
+        ? <EmployeeView user={user} orders={orders} products={products} onAddOrder={handleAddOrder} onAddProduct={handleAddProduct} />
+        : <AdminView orders={orders} onUpdateStatus={handleUpdateStatus} onDeleteOrder={handleDeleteOrder} activeTab={activeTab} setActiveTab={setActiveTab} onAddProduct={handleAddProduct} products={products} onDeleteProduct={handleDeleteProduct} onEditProduct={handleEditProduct} />
+      }
+      <ToastContainer toasts={toasts} />
+    </TweaksWrapper>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
