@@ -960,6 +960,8 @@ function SupplierSelect({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
+  useEffect(() => { setQuery(value || ''); }, [value]);
+
   useEffect(() => {
     const close = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', close);
@@ -1029,6 +1031,7 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
 
   const handleSubmit = () => {
     if (!name.trim()) { setErr('Il nome è obbligatorio.'); return; }
+    if (!supplier.trim()) { setErr('Il fornitore è obbligatorio.'); return; }
     onSubmit({ name: name.trim(), category, unit: unit.trim(), supplier: supplier.trim() });
   };
 
@@ -1081,7 +1084,7 @@ function NewProductModal({ onClose, onSubmit, prefillName = '' }) {
           {/* Fornitore */}
           <div>
             <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
-              Fornitore <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
+              Fornitore *
             </label>
             <SupplierSelect value={supplier} onChange={setSupplier} />
           </div>
@@ -1326,15 +1329,13 @@ function EmployeeView({ user, orders, products, onAddOrder, onAddProduct, produc
 }
 
 /* ─── Admin: riga ordine ─────────────────────────────── */
-function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) {
-  const [confirm, setConfirm] = useState(false);
+function OrderRow({ order: o, index, onUpdateStatus, isMobile }) {
   const isDone = o.status === 'done';
 
   /* Vista card su mobile */
   if (isMobile) {
     return (
       <div className="order-card-mobile" style={{ animationDelay:`${Math.min(index,8)*30}ms`, borderLeft:`3px solid ${isDone?'var(--green)':'var(--accent)'}` }}>
-        {/* Riga principale */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10 }}>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, flexWrap:'wrap' }}>
@@ -1348,30 +1349,16 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
             </div>
             {o.note && <div style={{ fontSize:12, color:'var(--text3)', marginTop:6, fontStyle:'italic', lineHeight:1.4 }}>"{o.note}"</div>}
           </div>
-          <span className={`badge badge-${isDone?'done':'pending'}`} style={{ flexShrink:0, marginTop:2 }}>
-            {isDone ? 'Evaso' : 'Attesa'}
-          </span>
+          <span className="badge badge-pending" style={{ flexShrink:0, marginTop:2 }}>Attesa</span>
         </div>
 
-        {/* Azioni */}
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <button
-            className={`btn btn-sm ${isDone ? 'btn-ghost' : 'btn-primary'}`}
+            className="btn btn-sm btn-primary"
             style={{ flex:1, minHeight:44, fontSize:14 }}
             onClick={() => onUpdateStatus(o.id)}>
-            <Icon name="check" size={15} />
-            {isDone ? 'Riapri' : 'Segna evaso'}
+            <Icon name="check" size={15} /> Segna evaso
           </button>
-          {confirm ? (
-            <div style={{ display:'flex', gap:6 }}>
-              <button className="btn btn-sm btn-danger" style={{ minHeight:44 }} onClick={() => { onDeleteOrder(o.id); setConfirm(false); }}>Elimina</button>
-              <button className="btn btn-sm btn-ghost"  style={{ minHeight:44 }} onClick={() => setConfirm(false)}>No</button>
-            </div>
-          ) : (
-            <button className="btn-icon" style={{ width:44, height:44, flexShrink:0 }} onClick={() => setConfirm(true)}>
-              <Icon name="trash" size={16} />
-            </button>
-          )}
         </div>
       </div>
     );
@@ -1380,7 +1367,7 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
   /* Vista tabella su desktop */
   return (
     <div className="anim-fadeUp"
-      style={{ animationDelay:`${Math.min(index,8)*25}ms`, display:'grid', gridTemplateColumns:'1fr 90px 140px 110px 120px 80px', gap:12, padding:'14px 18px', borderBottom:'1px solid var(--border)', alignItems:'center', transition:'background 0.12s' }}
+      style={{ animationDelay:`${Math.min(index,8)*25}ms`, display:'grid', gridTemplateColumns:'1fr 90px 140px 110px 120px', gap:12, padding:'14px 18px', borderBottom:'1px solid var(--border)', alignItems:'center', transition:'background 0.12s' }}
       onMouseEnter={e => e.currentTarget.style.background='var(--surface)'}
       onMouseLeave={e => e.currentTarget.style.background='transparent'}>
       <div>
@@ -1390,34 +1377,15 @@ function OrderRow({ order: o, index, onUpdateStatus, onDeleteOrder, isMobile }) 
         </div>
         {o.note && <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>"{o.note}"</div>}
       </div>
-      <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14 }}>
-        {o.quantity}
-      </div>
+      <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14 }}>{o.quantity}</div>
       <div style={{ fontSize:13, color:'var(--text2)' }}>{o.userName}</div>
       <div style={{ fontSize:12, color:'var(--text2)', display:'flex', alignItems:'center', gap:4 }}>
         <Icon name="clock" size={11} />{formatDate(o.date)}
       </div>
       <div>
-        <label className="check-wrap">
-          <div className={`check-box ${isDone?'checked':''}`} onClick={() => onUpdateStatus(o.id)}>
-            {isDone && <Icon name="check" size={11} />}
-          </div>
-          <span style={{ fontSize:12, color:isDone?'var(--green)':'var(--text2)' }}>
-            {isDone ? 'Ordinato' : 'In attesa'}
-          </span>
-        </label>
-      </div>
-      <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        {confirm ? (
-          <div style={{ display:'flex', gap:4 }}>
-            <button className="btn btn-sm btn-danger" onClick={() => { onDeleteOrder(o.id); setConfirm(false); }}>Sì</button>
-            <button className="btn btn-sm btn-ghost" onClick={() => setConfirm(false)}>No</button>
-          </div>
-        ) : (
-          <button className="btn-icon" style={{ width:36, height:36 }} onClick={() => setConfirm(true)}>
-            <Icon name="trash" size={13} />
-          </button>
-        )}
+        <button className="btn btn-sm btn-primary" style={{ fontSize:12 }} onClick={() => onUpdateStatus(o.id)}>
+          <Icon name="check" size={13} /> Segna evaso
+        </button>
       </div>
     </div>
   );
@@ -1438,6 +1406,7 @@ function EditProductModal({ product, onClose, onSubmit }) {
 
   const handleSubmit = () => {
     if (!name.trim()) { setErr('Il nome è obbligatorio.'); return; }
+    if (!supplier.trim()) { setErr('Il fornitore è obbligatorio.'); return; }
     onSubmit({ id: product.id, name: name.trim(), category, unit: unit.trim(), supplier: supplier.trim() });
   };
 
@@ -1477,7 +1446,7 @@ function EditProductModal({ product, onClose, onSubmit }) {
           </div>
           <div>
             <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--text2)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>
-              Fornitore <span style={{ color:'var(--text3)', fontWeight:400, textTransform:'none' }}>(opzionale)</span>
+              Fornitore *
             </label>
             <SupplierSelect value={supplier} onChange={setSupplier} />
           </div>
@@ -1546,13 +1515,13 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
   const [productSearch, setProductSearch] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const handleNewProduct = ({ name, category, unit }) => {
-    onAddProduct({ name, category, unit });
+  const handleNewProduct = ({ name, category, unit, supplier }) => {
+    onAddProduct({ name, category, unit, supplier });
     setShowNewProduct(false);
   };
 
   const isArchive = activeTab === 'archivio';
-  const isStats   = isMobile && activeTab === 'stats';
+  const isCatalog = isMobile && activeTab === 'catalogo';
   const baseOrders = isArchive ? orders.filter(o => o.status === 'done') : orders;
   const pending = orders.filter(o => o.status === 'pending');
   const done    = orders.filter(o => o.status === 'done');
@@ -1563,134 +1532,97 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
   let displayed = baseOrders.filter(o => {
     if (!isArchive && filter === 'pending') return o.status === 'pending';
     if (!isArchive && filter === 'done') return o.status === 'done';
-    if (search) return o.productName.toLowerCase().includes(search.toLowerCase()) || o.userName.toLowerCase().includes(search.toLowerCase());
+    if (search) { const q = search.toLowerCase(); return o.productName.toLowerCase().includes(q) || o.userName.toLowerCase().includes(q) || (o.supplier || '').toLowerCase().includes(q); }
     return true;
   }).filter(o => supplierFilter === 'tutti' || o.supplier === supplierFilter);
   if (sort === 'date-desc') displayed = [...displayed].sort((a,b) => new Date(b.date)-new Date(a.date));
   if (sort === 'date-asc')  displayed = [...displayed].sort((a,b) => new Date(a.date)-new Date(b.date));
   if (sort === 'name')      displayed = [...displayed].sort((a,b) => a.productName.localeCompare(b.productName));
 
-  /* ── STATS PANEL (desktop sempre, mobile solo tab Statistiche) ── */
-  const StatsPanel = () => (
-    <div>
-      <div className="stat-grid" style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap:isMobile ? 10 : 12, marginBottom: isMobile ? 0 : 24 }}>
-        <div className="stat-card">
-          <div className="stat-value">{orders.length}</div>
-          <div className="stat-label">Totale</div>
+  /* ── CATALOG PANEL (desktop sempre non-archivio, mobile tab Catalogo) ── */
+  const CatalogPanel = () => {
+    const filteredProducts = products.filter(p =>
+      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+      p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
+      (p.supplier || '').toLowerCase().includes(productSearch.toLowerCase())
+    );
+    return (
+      <div style={{ maxWidth: isMobile ? '100%' : 340, width:'100%' }}>
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+          <div>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize: isMobile ? 22 : 18, fontWeight:700 }}>Catalogo</h2>
+            <p style={{ fontSize:12, color:'var(--text3)', marginTop:2 }}>{products.length} prodotti</p>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowNewProduct(true)}>
+            <Icon name="plus" size={14} /> Aggiungi
+          </button>
         </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color:'var(--accent)' }}>{pending.length}</div>
-          <div className="stat-label">In attesa</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color:'var(--green)' }}>{done.length}</div>
-          <div className="stat-label">Evase</div>
-        </div>
-        {isMobile && (
-          <div className="stat-card">
-            <div className="stat-value">{orders.length ? Math.round(done.length/orders.length*100) : 0}%</div>
-            <div className="stat-label">Tasso evasione</div>
+
+        {productsDirty && (
+          <button className="btn btn-primary anim-fadeIn" onClick={onSaveProducts}
+            style={{ width:'100%', marginBottom:10, background:'var(--green)', borderColor:'var(--green)' }}>
+            <Icon name="check" size={15} /> Salva catalogo
+          </button>
+        )}
+        {productsDirty && (
+          <div style={{ marginBottom:12, fontSize:12, color:'var(--accent)', textAlign:'center' }}>
+            Modifiche non salvate
           </div>
         )}
-      </div>
 
-      {/* Grafico a barre veloce su mobile stats */}
-      {isMobile && orders.length > 0 && (
-        <div className="card" style={{ marginTop:16 }}>
-          <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:14 }}>Avanzamento</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {[['In attesa', pending.length, 'var(--accent)'], ['Evase', done.length, 'var(--green)']].map(([label, val, color]) => (
-              <div key={label}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:6 }}>
-                  <span style={{ color:'var(--text2)', fontWeight:600 }}>{label}</span>
-                  <span style={{ fontFamily:'var(--font-mono)', fontWeight:700 }}>{val}</span>
-                </div>
-                <div style={{ height:8, background:'var(--surface2)', borderRadius:4, overflow:'hidden' }}>
-                  <div style={{ height:'100%', width:`${Math.round(val/orders.length*100)}%`, background:color, borderRadius:4, transition:'width .6s cubic-bezier(.16,1,.3,1)' }} />
-                </div>
-              </div>
+        {/* Ricerca */}
+        <div style={{ position:'relative', marginBottom:12 }}>
+          <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' }}>
+            <Icon name="search" size={14} />
+          </span>
+          <input className="input" style={{ paddingLeft:36, height:42, fontSize:14 }}
+            placeholder="Cerca per nome, categoria, fornitore..."
+            value={productSearch} onChange={e => setProductSearch(e.target.value)} />
+        </div>
+
+        {/* Lista prodotti */}
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:12, fontWeight:700, color:'var(--text2)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Prodotti</span>
+            <span style={{ fontSize:12, color:'var(--text3)', fontFamily:'var(--font-mono)', background:'var(--surface2)', padding:'2px 8px', borderRadius:999 }}>{filteredProducts.length}</span>
+          </div>
+          <div style={{ overflowY:'auto', WebkitOverflowScrolling:'touch', maxHeight: isMobile ? 'calc(100vh - 320px)' : 480 }}>
+            {filteredProducts.length === 0 ? (
+              <div style={{ padding:'32px 16px', textAlign:'center', color:'var(--text3)', fontSize:14 }}>Nessun prodotto trovato.</div>
+            ) : filteredProducts.map(p => (
+              <ProductRow key={p.id} product={p} onEdit={setEditingProduct} onDelete={onDeleteProduct} />
             ))}
           </div>
         </div>
-      )}
-
-      {/* Bottone nuovo prodotto + Salva */}
-      <div style={{ display:'flex', gap:8, marginTop:isMobile ? 20 : 16 }}>
-        <button className="btn btn-primary" style={{ flex:1 }} onClick={() => setShowNewProduct(true)}>
-          <Icon name="plus" size={16} /> Aggiungi prodotto
-        </button>
-        {productsDirty && (
-          <button className="btn btn-primary anim-fadeIn" onClick={onSaveProducts}
-            style={{ flex:1, background:'var(--green)', borderColor:'var(--green)' }}>
-            <Icon name="check" size={16} /> Salva catalogo
-          </button>
-        )}
       </div>
-      {productsDirty && (
-        <div style={{ marginTop:8, fontSize:12, color:'var(--accent)', textAlign:'center' }}>
-          Hai modifiche non salvate — premi "Salva catalogo" per confermare
-        </div>
-      )}
-
-      {/* Catalogo prodotti — solo admin, con elimina */}
-      {(() => {
-        const filteredProducts = products.filter(p =>
-          p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-          p.category.toLowerCase().includes(productSearch.toLowerCase())
-        );
-        return (
-          <div className="card" style={{ marginTop:16, padding:0, overflow:'hidden' }}>
-            <div style={{ padding:'13px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', gap:10 }}>
-              <span style={{ fontWeight:700, fontSize:14 }}>Catalogo prodotti</span>
-              <span style={{ fontSize:12, color:'var(--text3)', fontFamily:'var(--font-mono)', background:'var(--surface2)', padding:'2px 8px', borderRadius:999 }}>{filteredProducts.length}</span>
-            </div>
-            <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--border)' }}>
-              <div style={{ position:'relative' }}>
-                <span style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' }}>
-                  <Icon name="search" size={14} />
-                </span>
-                <input className="input" style={{ paddingLeft:34, height:40, fontSize:14 }}
-                  placeholder="Cerca prodotto..."
-                  value={productSearch} onChange={e => setProductSearch(e.target.value)} />
-              </div>
-            </div>
-            <div style={{ maxHeight: isMobile ? 320 : 220, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
-              {filteredProducts.length === 0 ? (
-                <div style={{ padding:'24px 16px', textAlign:'center', color:'var(--text3)', fontSize:14 }}>Nessun prodotto trovato.</div>
-              ) : filteredProducts.map(p => (
-                <ProductRow key={p.id} product={p} onEdit={setEditingProduct} onDelete={onDeleteProduct} />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{ maxWidth:1100, margin:'0 auto', padding: isMobile ? '16px 14px' : '24px 20px' }} className={isMobile ? 'has-mobile-tabs' : ''}>
 
-      {/* Stats: desktop sempre (non archivio), mobile solo tab stats */}
-      {!isMobile && !isArchive && StatsPanel()}
-      {isStats && StatsPanel()}
+      {/* Catalogo: desktop sempre (non archivio) in sidebar, mobile solo tab catalogo */}
+      {isCatalog && (
+        <div style={{ paddingBottom:80 }}>{CatalogPanel()}</div>
+      )}
 
       {/* Titolo sezione su mobile */}
-      {isMobile && !isStats && (
+      {isMobile && !isCatalog && (
         <div style={{ marginBottom:14 }}>
           <h2 style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700 }}>
             {isArchive ? 'Archivio' : 'Ordini'}
           </h2>
           {!isArchive && pending.length > 0 && (
-            <p style={{ color:'var(--accent)', fontSize:13, marginTop:3 }}>
-              {pending.length} {pending.length === 1 ? 'richiesta in attesa' : 'richieste in attesa'}
-            </p>
+            <p style={{ color:'var(--accent)', fontSize:13, marginTop:3 }}>Richieste in attesa</p>
           )}
         </div>
       )}
 
-      {/* Tutto tranne stats: nascondi su mobile stats tab */}
-      {!isStats && (
-        <>
+      {/* Ordini + sidebar catalogo (desktop) */}
+      {!isCatalog && (
+        <div style={{ display: isMobile ? 'block' : 'flex', gap:24, alignItems:'flex-start' }}>
+        <div style={{ flex:1, minWidth:0 }}>
           {/* Toolbar ricerca + filtri */}
           <div className="anim-fadeUp" style={{ animationDelay:'60ms', display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:10, marginBottom:14, alignItems: isMobile ? 'stretch' : 'center', flexWrap:'wrap' }}>
             {/* Ricerca — su mobile prende tutta la larghezza (flex column) */}
@@ -1738,33 +1670,40 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
                     <option value="name">A–Z prodotto</option>
                   </select>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => setShowNewProduct(true)}
-                  style={{ flexShrink:0, borderColor:'rgba(232,160,32,0.3)', color:'var(--accent)', background:'var(--accent-dim)', minHeight:44 }}>
-                  <Icon name="plus" size={15} /> Nuovo prodotto
-                </button>
               </div>
             )}
           </div>
 
-          {/* Filtro fornitori */}
+          {/* Filtro fornitori — tag cliccabili */}
           {suppliers.length > 1 && (
-            <div style={{ marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em', whiteSpace:'nowrap' }}>Fornitore</div>
-              <div style={{ flex:1, position:'relative', maxWidth: isMobile ? '100%' : 340 }}>
-                <select className="select-native"
-                  value={supplierFilter}
-                  onChange={e => setSupplierFilter(e.target.value)}
-                  style={{ paddingLeft:36, minHeight:42 }}>
-                  <option value="tutti">Tutti i fornitori</option>
-                  {suppliers.filter(s => s !== 'tutti').map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', fontSize:14 }}>🏪</span>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:7 }}>Fornitore</div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {suppliers.map(s => {
+                  const isActive = supplierFilter === s;
+                  const label = s === 'tutti' ? 'Tutti' : s;
+                  return (
+                    <button key={s}
+                      onClick={() => setSupplierFilter(isActive && s !== 'tutti' ? 'tutti' : s)}
+                      style={{
+                        display:'inline-flex', alignItems:'center', gap:5,
+                        padding:'5px 12px', borderRadius:20, cursor:'pointer', fontSize:12, fontWeight:600,
+                        whiteSpace:'nowrap', transition:'all 0.15s',
+                        border: isActive
+                          ? '1.5px solid #9a85e8'
+                          : '1.5px solid var(--border)',
+                        background: isActive
+                          ? 'rgba(154,133,232,0.18)'
+                          : 'var(--bg2)',
+                        color: isActive ? '#b8a8f0' : 'var(--text2)',
+                        boxShadow: isActive ? '0 0 0 2px rgba(154,133,232,0.12)' : 'none',
+                      }}>
+                      {s !== 'tutti' && <span style={{ fontSize:11 }}>🏪</span>}
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
-              {supplierFilter !== 'tutti' && (
-                <button className="btn btn-ghost btn-sm" onClick={() => setSupplierFilter('tutti')} style={{ flexShrink:0, fontSize:13 }}>✕ Rimuovi filtro</button>
-              )}
             </div>
           )}
 
@@ -1786,17 +1725,17 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
               /* Card layout su mobile */
               <div>
                 {displayed.map((o, i) => (
-                  <OrderRow key={o.id} order={o} index={i} onUpdateStatus={onUpdateStatus} onDeleteOrder={onDeleteOrder} isMobile={true} />
+                  <OrderRow key={o.id} order={o} index={i} onUpdateStatus={onUpdateStatus} isMobile={true} />
                 ))}
               </div>
             ) : (
               /* Tabella su desktop */
               <div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 90px 140px 110px 120px 80px', gap:12, padding:'10px 18px', borderBottom:'1px solid var(--border)', fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
-                  <span>Prodotto</span><span>Qtà</span><span>Richiesto da</span><span>Data</span><span>Stato</span><span />
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 90px 140px 110px 120px', gap:12, padding:'10px 18px', borderBottom:'1px solid var(--border)', fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                  <span>Prodotto</span><span>Qtà</span><span>Richiesto da</span><span>Data</span><span>Azione</span>
                 </div>
                 {displayed.map((o, i) => (
-                  <OrderRow key={o.id} order={o} index={i} onUpdateStatus={onUpdateStatus} onDeleteOrder={onDeleteOrder} isMobile={false} />
+                  <OrderRow key={o.id} order={o} index={i} onUpdateStatus={onUpdateStatus} isMobile={false} />
                 ))}
               </div>
             )}
@@ -1805,7 +1744,14 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
           <div style={{ marginTop:10, fontSize:12, color:'var(--text3)', textAlign: isMobile ? 'center' : 'right' }}>
             {displayed.length} richieste visualizzate
           </div>
-        </>
+        </div>
+        {/* Sidebar catalogo — solo desktop, non archivio */}
+        {!isMobile && !isArchive && (
+          <div style={{ width:320, flexShrink:0 }}>
+            {CatalogPanel()}
+          </div>
+        )}
+        </div>
       )}
 
       {/* Modal nuovo prodotto */}
@@ -1821,8 +1767,8 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
         <EditProductModal
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
-          onSubmit={({ id, name, category, unit }) => {
-            onEditProduct({ id, name, category, unit });
+          onSubmit={({ id, name, category, unit, supplier }) => {
+            onEditProduct({ id, name, category, unit, supplier });
             setEditingProduct(null);
           }}
         />
@@ -1837,9 +1783,9 @@ function AdminView({ orders, onUpdateStatus, onDeleteOrder, activeTab, setActive
               Ordini
               {pending.length > 0 && <span className="tab-dot" />}
             </button>
-            <button className={`mobile-tab-btn ${activeTab==='stats'?'active':''}`} onClick={() => setActiveTab('stats')}>
-              <Icon name="sort" size={20} />
-              Statistiche
+            <button className={`mobile-tab-btn ${activeTab==='catalogo'?'active':''}`} onClick={() => setActiveTab('catalogo')}>
+              <Icon name="package" size={20} />
+              Catalogo
             </button>
             <button className={`mobile-tab-btn ${activeTab==='archivio'?'active':''}`} onClick={() => setActiveTab('archivio')}>
               <Icon name="history" size={20} />
@@ -1945,13 +1891,12 @@ function App() {
   const handleUpdateStatus = id => {
     const o = orders.find(x => x.id === id);
     if (!o) return;
-    const newStatus = o.status === 'done' ? 'pending' : 'done';
     if (FB_ENABLED && _db) {
-      _db.ref(`orders/${id}`).update({ status: newStatus });
+      _db.ref(`orders/${id}`).remove();
     } else {
-      setOrders(prev => prev.map(x => x.id === id ? { ...x, status: newStatus } : x));
+      setOrders(prev => prev.filter(x => x.id !== id));
     }
-    showToast(o.status === 'done' ? `"${o.productName}" riportato in attesa` : `"${o.productName}" segnato ordinato ✓`, 'success');
+    showToast(`"${o.productName}" segnato evaso ✓`, 'success');
   };
 
   const handleDeleteOrder = id => {
